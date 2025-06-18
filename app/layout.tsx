@@ -8,7 +8,8 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Gestion des Stages",
   description: "Application de gestion des stages et stagiaires",
-    generator: 'v0.dev'
+    generator: 'Next.js',
+  applicationName: 'Gestion des Stages',
 }
 
 export default function RootLayout({
