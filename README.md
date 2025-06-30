@@ -1,30 +1,67 @@
-# stageeaa1
+# Gestion Stage
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+**Gestion Stage** est une application web moderne de gestion des stages, développée avec Next.js, TypeScript, Supabase et TailwindCSS. Elle permet la gestion centralisée des stagiaires, tuteurs, RH, demandes, documents, évaluations et reporting, avec une interface multirôle (admin, RH, tuteur, stagiaire).
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/maevamawamba-ucac-icamcos-projects/v0-stageeaa1)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/tiPauL0PMf3)
+## Fonctionnalités principales
 
-## Overview
+- **Authentification sécurisée** (Supabase)
+- **Gestion des utilisateurs** (admin, RH, tuteur, stagiaire)
+- **Gestion des stagiaires** (création, suivi, affectation tuteur)
+- **Gestion des demandes** (création, suivi, validation)
+- **Gestion des documents** (dépôt, validation)
+- **Évaluations et reporting** (statistiques, rapports)
+- **Notifications**
+- **Interface multilingue** (français/anglais)
+- **Thème clair/sombre**
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Stack technique
 
-## Deployment
+- **Framework** : Next.js (App Router)
+- **Langage** : TypeScript
+- **Base de données & Auth** : Supabase
+- **UI** : TailwindCSS, Radix UI, Lucide Icons
+- **State management** : Zustand
+- **Déploiement** : Vercel
 
-Your project is live at:
+## Structure du projet
 
-**[https://vercel.com/maevamawamba-ucac-icamcos-projects/v0-stageeaa1](https://vercel.com/maevamawamba-ucac-icamcos-projects/v0-stageeaa1)**
+- `app/` : Pages et routes principales (admin, rh, tuteur, stagiaire, auth, api)
+- `components/` : Composants UI réutilisables (boutons, cartes, header, sélecteurs)
+- `lib/` : Fonctions utilitaires, hooks, gestion du store Zustand, services Supabase
+- `public/` : Images et assets statiques
+- `scripts/` : Scripts SQL pour la base de données
+- `styles/` : Fichiers CSS globaux
 
-## Build your app
+## Installation & Lancement
 
-Continue building your app on:
+```bash
+# Installer les dépendances
+pnpm install
 
-**[https://v0.dev/chat/projects/tiPauL0PMf3](https://v0.dev/chat/projects/tiPauL0PMf3)**
+# Lancer le serveur de développement
+pnpm dev
+```
 
-## How It Works
+Configurer les variables d’environnement Supabase dans un fichier `.env.local` :
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+## Scripts utiles
+
+- `pnpm build` : Build de production
+- `pnpm start` : Lancer en mode production
+- `pnpm lint` : Linter le code
+
+## Déploiement
+
+Déployé automatiquement sur [Vercel](https://vercel.com/).
+
+## Contribution
+
+1. Fork le repo
+2. Crée une branche (`git checkout -b feature/ma-feature`)
+3. Commit tes modifications
+4. Push et ouvre une Pull Request

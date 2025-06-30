@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Bridge Technologies - Gestion des Stages",
   description: "Plateforme de gestion des stages et stagiaires",
-    generator: 'v0.dev'
+    generator: 'laurent_Alex'
 }
 
 export default function RootLayout({
