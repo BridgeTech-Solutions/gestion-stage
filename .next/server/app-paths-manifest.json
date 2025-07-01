@@ -1,6 +1,0 @@
-{
-  "/stagiaire/page": "app/stagiaire/page.js",
-  "/auth/login/page": "app/auth/login/page.js",
-  "/page": "app/page.js",
-  "/stagiaire/demandes/nouvelle/page": "app/stagiaire/demandes/nouvelle/page.js"
-}
