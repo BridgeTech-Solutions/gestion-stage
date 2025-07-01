@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { FileText, Users, TrendingUp, Settings, Calendar, CheckCircle2, Clock, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
@@ -64,17 +65,17 @@ export default function HomePage() {
       <Header/>
 
       {/* Hero Section */}
-      <section className="bg-gray-200 py-16 relative min-h-[500px] text-[rgba(135,135,134,1)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
+      <section className="bg-gray-200 py-16 relative min-h-[500px] text-[rgba(135,135,134,1)] dark:bg-gray-800">
+        <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 h-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center h-full">
             {/* Left Content */}
             <div className="text-left space-y-6">
-              <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-black">
+              <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-black dark:text-white">
                 Bienvenue sur
                 <br />
                 Bridge Technologies Solutions
               </h1>
-              <p className="text-base lg:text-lg leading-relaxed max-w-md text-black">
+              <p className="text-base lg:text-lg leading-relaxed max-w-md text-black dark:text-white">
                 Explorez et soumettez vos demandes de stage en toute simplicité grâce à notre plateforme intuitive.
               </p>
             </div>
@@ -85,26 +86,30 @@ export default function HomePage() {
                 <img
                   src="/images/hero-laptop.png"
                   alt="Professional workspace"
-                  className="w-full max-w-sm lg:max-w-md rounded-lg shadow-lg"
+                  className="dark:hidden w-full max-w-sm lg:max-w-md rounded-lg shadow-lg"
                 />
+
+                  <img
+                  src="https://cdn.pixabay.com/photo/2015/01/08/18/11/laptops-593296_1280.jpg"
+                  alt="Professional"
+                  className="w-full px-8 py-12 max-w-sm lg:max-w-md rounded-lg shadow-lg  hidden dark:block"
+                />
+                
                 {/* Blue Circle */}
-                <div className="absolute -top-4 -right-4 w-20 h-20 bg-blue-600 rounded-full z-10"></div>
+               
               </div>
             </div>
           </div>
         </div>
-
-        {/* Frame 2 Label */}
-        <div className="absolute top-4 right-4 text-white/60 text-xs">Frame 2</div>
       </section>
 
       {/* CTA Section */}
-      <section className="bg-gray-200 py-12">
+      <section className="bg-gray-200 py-12 dark:bg-gray-800 text-gray-700 dark:text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-xl lg:text-2xl font-bold mb-3 text-black">
+          <h2 className="text-xl lg:text-2xl font-bold mb-3 text-black dark:text-white">
             Commencer dès maintenant et suivez en temps réel
           </h2>
-          <p className="mb-8 text-sm lg:text-base text-black">
+          <p className="mb-8 text-sm lg:text-base text-black dark:text-white">
             Déposez votre candidature en un clic et suivez son avancé en temps réel
           </p>
 
@@ -118,7 +123,7 @@ export default function HomePage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="bg-white text-black hover:bg-gray-100 border-white px-6 py-2 text-sm font-medium rounded"
+                className="bg-white text-black hover:bg-gray-100 hover:text-black  border-white px-6 py-2 text-sm font-medium rounded"
               >
                 J'ai déjà un compte
               </Button>
@@ -128,28 +133,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-6 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-between items-center text-xs text-gray-700">
-            <div className="flex items-center space-x-1">
-              <span className="font-medium">🏢</span>
-              <span>Bridge Technologies Solutions</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span>Tous droits réservés</span>
-              <Link href="#" className="hover:text-gray-900">
-                Conditions d'utilisation
-              </Link>
-              <Link href="#" className="hover:text-gray-900">
-                Politique de confidentialité
-              </Link>
-              <Link href="#" className="hover:text-gray-900">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer/>      
     </div>
   )
 }

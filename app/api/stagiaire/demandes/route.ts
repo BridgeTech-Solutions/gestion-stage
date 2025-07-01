@@ -7,9 +7,11 @@ export async function GET() {
 
     // Vérifier l'authentification
     const {
-      data: { user },
+      data: { session },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getSession()
+
+    const user = session?.user
 
     if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })

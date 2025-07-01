@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/layout/header"
+import { Footer } from "@/components/layout/footer"
 import { authService } from "@/lib/services/auth-service"
 
 export default function LoginPage() {
@@ -56,16 +57,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen h-screen flex flex-col">
       {/* Header */}
       <Header showAuth={true} />
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex min-h-screen h-screen w-full">
         {/* Left Side - Image */}
         <div className="hidden lg:flex lg:w-1/2 relative">
           <div
-            className="w-full bg-cover bg-center"
+            className="w-full h-full bg-cover bg-center"
             style={{
               backgroundImage: `url('/images/hero-laptop.png')`,
             }}
@@ -161,25 +162,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between max-w-7xl mx-auto text-sm text-gray-600">
-          <div className="flex items-center space-x-4">
-            <span>🎓 @BridgeTech-Solutions</span>
-            <span>Tous droits réservés</span>
-          </div>
-          <div className="flex items-center space-x-6">
-            <Link href="/terms" className="hover:text-gray-900">
-              Condition d'utilisation
-            </Link>
-            <Link href="/privacy" className="hover:text-gray-900">
-              Politique de confidentialité
-            </Link>
-            <Link href="/contact" className="hover:text-gray-900">
-              Contact
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer /> 
     </div>
   )
 }
