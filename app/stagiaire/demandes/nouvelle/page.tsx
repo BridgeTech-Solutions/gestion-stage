@@ -126,16 +126,15 @@ export default function NouvelleDemandePage() {
         body: formData,
       })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ Erreur HTTP:", response.status, errorText)
-        throw new Error(`Erreur ${response.status}: ${errorText}`)
+      const result = await response.json()
+      console.log("📥 Réponse upload:", result)
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || `Erreur HTTP ${response.status}`)
       }
 
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || "Erreur lors de l'upload")
+      if (!result.data || !result.data.url) {
+        throw new Error("Réponse du serveur incomplète (pas d'URL retournée)")
       }
 
       console.log("✅ Fichier uploadé:", result.data)

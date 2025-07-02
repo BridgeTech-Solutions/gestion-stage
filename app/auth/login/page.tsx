@@ -76,14 +76,14 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="w-full lg:w-1/2 bg-gray-100 flex items-center justify-center p-8">
+        <div className="w-full lg:w-1/2 bg-gray-100 flex items-center justify-center p-8 dark:bg-gray-900">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-semibold text-gray-900 mb-2">Connexion à votre compte</h1>
-              <h2 className="text-xl font-medium text-gray-700">Bridge</h2>
+              <h1 className="text-2xl font-semibold text-gray-900 mb-2 dark:text-white">Connexion à votre compte</h1>
+              <h2 className="text-xl font-medium text-gray-700 dark:text-white">Bridge</h2>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6 ">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               )}
 
               <div>
-                <Label htmlFor="email" className="text-gray-700 font-medium">
+                <Label htmlFor="email" className="text-gray-700 font-medium dark:text-white">
                   Email
                 </Label>
                 <Input
@@ -99,13 +99,13 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="mt-2 bg-white border-gray-300"
+                  className="mt-2 bg-white border-gray-300 dark:text-black"
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-gray-700 font-medium">
+                <Label htmlFor="password" className="text-gray-700 font-medium dark:text-white">
                   Mot de passe
                 </Label>
                 <Input
@@ -113,7 +113,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="mt-2 bg-white border-gray-300"
+                  className="mt-2 bg-white border-gray-300 dark:text-black"
                   required
                 />
               </div>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                     <div className="w-full border-t border-gray-300" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-gray-100 text-gray-500">ou</span>
+                    <span className="px-2 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400">ou</span>
                   </div>
                 </div>
               </div>

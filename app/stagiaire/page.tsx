@@ -186,7 +186,7 @@ export default function StagiaireDashboard() {
 
         {/* Informations du stage */}
         {stagiaireInfo && (
-          <Card className="mb-8">
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up mb-8" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span>Informations de stage</span>
@@ -236,7 +236,7 @@ export default function StagiaireDashboard() {
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Mes demandes</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -256,7 +256,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Mes documents</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -267,7 +267,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Évaluations</CardTitle>
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -278,7 +278,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Note moyenne</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -294,7 +294,7 @@ export default function StagiaireDashboard() {
 
         {/* Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Nouvelle demande</CardTitle>
               <CardDescription>Soumettre une nouvelle demande</CardDescription>
@@ -307,7 +307,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Mes demandes</CardTitle>
               <CardDescription>Consulter le statut de mes demandes</CardDescription>
@@ -320,7 +320,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Mes documents</CardTitle>
               <CardDescription>Gérer mes documents</CardDescription>
@@ -333,7 +333,7 @@ export default function StagiaireDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Mon profil</CardTitle>
               <CardDescription>Mettre à jour mes informations</CardDescription>

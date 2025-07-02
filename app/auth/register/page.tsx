@@ -177,10 +177,7 @@ export default function RegisterPage() {
                         <SelectValue placeholder="Sélectionnez un rôle" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="stagiaire">Stagiaire</SelectItem>
-                        <SelectItem value="tuteur">Tuteur</SelectItem>
-                        <SelectItem value="rh">RH</SelectItem>
-                        <SelectItem value="admin">Administrateur</SelectItem>
+                        <SelectItem value="stagiaire">Stagiaire</SelectItem>                   
                       </SelectContent>
                     </Select>
                     {errors.role && <p className="text-sm text-red-500">{errors.role}</p>}
