@@ -102,7 +102,24 @@ export async function POST(
     }
 
     const { id } = params
-    const { document_id, type_document, obligatoire = false } = await request.json()
+    const { documents, ...rest } = await request.json()
+    const documents_requis = Array.isArray(documents) ? documents : []
+
+    // Vérification explicite des champs attendus
+    const insertions = documents_requis.map(doc => {
+      if (!doc.type) {
+        throw new Error("Chaque document doit avoir un champ 'type'")
+      }
+      // document_id peut être null si non fourni
+      return {
+        id: crypto.randomUUID(),
+        demande_id: id,
+        document_id: doc.document_id ?? null,
+        type_document: doc.type,
+        obligatoire: doc.obligatoire ?? false,
+        created_at: new Date().toISOString()
+      }
+    })
 
     // Vérifier que la demande appartient à l'utilisateur
     const { data: demande, error: demandeError } = await supabase
@@ -122,44 +139,24 @@ export async function POST(
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
     }
 
-    // Vérifier que le document existe et appartient à l'utilisateur
-    const { data: document, error: documentError } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', document_id)
-      .eq('user_id', user.id)
-      .single()
-
-    if (documentError || !document) {
-      return NextResponse.json({ error: 'Document non trouvé' }, { status: 404 })
-    }
-
-    // Lier le document à la demande
-    const { data: lien, error: lienError } = await supabase
+    // Insertion des liaisons document-demande
+    const { data: liens, error: liensError } = await supabase
       .from('demande_documents')
-      .insert({
-        id: crypto.randomUUID(),
-        demande_id: id,
-        document_id: document_id,
-        type_document: type_document,
-        obligatoire: obligatoire,
-        created_at: new Date().toISOString()
-      })
+      .insert(insertions)
       .select()
-      .single()
 
-    if (lienError) {
-      console.error('Erreur création lien:', lienError)
-      return NextResponse.json({ error: 'Erreur lors de la liaison du document' }, { status: 500 })
+    if (liensError) {
+      console.error('Erreur création liens:', liensError)
+      return NextResponse.json({ error: 'Erreur lors de la liaison des documents' }, { status: 500 })
     }
 
     return NextResponse.json({
-      message: 'Document lié avec succès',
-      lien
+      message: 'Documents liés avec succès',
+      liens
     })
 
   } catch (error) {
-    console.error('Erreur API liaison document:', error)
+    console.error('Erreur API liaison documents:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
