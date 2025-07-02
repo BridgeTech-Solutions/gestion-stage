@@ -27,21 +27,21 @@ class ApiService {
         return {
           success: false,
           error: error.message || "Une erreur est survenue",
-          data: null,
+          data: undefined,
         }
       }
 
       return {
         success: true,
         data: data as T,
-        error: null,
+        error: undefined,
       }
     } catch (error) {
       console.error("Unexpected error:", error)
       return {
         success: false,
         error: "Une erreur inattendue est survenue",
-        data: null,
+        data: undefined,
       }
     }
   }
@@ -70,7 +70,7 @@ class ApiService {
       return {
         success: true,
         data: data as T[],
-        error: null,
+        error: undefined,
         pagination: {
           total: count || 0,
           page: 1,

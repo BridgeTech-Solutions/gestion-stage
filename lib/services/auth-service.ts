@@ -26,7 +26,7 @@ class AuthService {
     error: Error | null
   }> {
     try {
-      // Clear any existing session first
+      // supprime d'abord toute précédente session ouverte 
       await this.supabase.auth.signOut()
 
       // Sign in with fresh credentials
