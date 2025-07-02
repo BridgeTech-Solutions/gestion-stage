@@ -14,15 +14,49 @@ import { Plus, Upload, ArrowLeft } from "lucide-react"
 export default function NouvelleDemandePage() {
   const [user, setUser] = useState<any>(null)
   const [demandType, setDemandType] = useState("stage_academique")
-  const [documents, setDocuments] = useState({
-    cv: null as File | null,
-    certificat_scolarite: null as File | null,
-    lettre_motivation: null as File | null,
-    lettre_recommandation: null as File | null,
-    dernier_diplome: null as File | null,
-    document_supplementaire: null as File | null,
-    piece_identite: null as File | null,
-    plan_localisation: null as File | null,
+  type DocumentKeys =
+    | "cv"
+    | "certificat_scolarite"
+    | "lettre_motivation"
+    | "lettre_recommandation"
+    | "dernier_diplome"
+    | "document_supplementaire"
+    | "piece_identite"
+    | "plan_localisation"
+
+  type DocumentsState = {
+    [K in DocumentKeys]: File | null
+  } & {
+    [K in `${DocumentKeys}_id`]: string | undefined
+  } & {
+    [K in `${DocumentKeys}_url`]: string | undefined
+  }
+
+  const [documents, setDocuments] = useState<DocumentsState>({
+    cv: null,
+    certificat_scolarite: null,
+    lettre_motivation: null,
+    lettre_recommandation: null,
+    dernier_diplome: null,
+    document_supplementaire: null,
+    piece_identite: null,
+    plan_localisation: null,
+    cv_id: undefined,
+    certificat_scolarite_id: undefined,
+    lettre_motivation_id: undefined,
+    lettre_recommandation_id: undefined,
+    dernier_diplome_id: undefined,
+    document_supplementaire_id: undefined,
+    piece_identite_id: undefined,
+    plan_localisation_id: undefined,
+    cv_url: undefined,
+    certificat_scolarite_url: undefined,
+    lettre_motivation_url: undefined,
+    lettre_recommandation_url: undefined,
+    dernier_diplome_url: undefined,
+    document_supplementaire_url: undefined,
+    piece_identite_url: undefined,
+    plan_localisation_url: undefined,
   })
   const [congeData, setCongeData] = useState({
     date_debut: "",
@@ -110,14 +144,24 @@ export default function NouvelleDemandePage() {
     checkAuth()
   }, [router, supabase])
 
-  const uploadFile = async (file: File, documentType: string): Promise<string | null> => {
+  const uploadFile = async (
+    file: File,
+    documentType: string
+  ): Promise<{ id: string; url: string; [key: string]: any } | null> => {
     try {
       setUploadingFiles((prev) => new Set(prev).add(documentType))
 
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("type", documentType)
-      formData.append("isPublic", "false")
+      // Ajoute le champ metadata attendu par l'API
+      formData.append(
+        "metadata",
+        JSON.stringify({
+          nom: file.name,
+          type: documentType,
+          description: "",
+        })
+      )
 
       console.log("📤 Upload démarré:", { fileName: file.name, type: documentType, size: file.size })
 
@@ -126,26 +170,42 @@ export default function NouvelleDemandePage() {
         body: formData,
       })
 
-      const result = await response.json()
+      let result: any = {}
+      try {
+        result = await response.json()
+      } catch (jsonErr) {
+        throw new Error("Réponse du serveur d'upload invalide (non JSON)")
+      }
       console.log("📥 Réponse upload:", result)
 
       if (!response.ok || !result.success) {
-        throw new Error(result.error || `Erreur HTTP ${response.status}`)
+        let errorMsg = "Erreur lors de l'upload du fichier."
+        if (result?.error) {
+          errorMsg = result.error
+        } else if (result?.message) {
+          errorMsg = result.message
+        }
+        throw new Error(errorMsg)
       }
 
-      if (!result.data || !result.data.url) {
-        throw new Error("Réponse du serveur incomplète (pas d'URL retournée)")
+      if (!result.document || !result.document.url || !result.document.id) {
+        throw new Error("Réponse du serveur incomplète (pas d'ID ou d'URL retournée)")
       }
-
-      console.log("✅ Fichier uploadé:", result.data)
-      return result.data.url
-    } catch (error) {
-      console.error("❌ Erreur upload:", error)
+      console.log("✅ Fichier uploadé:", result.document)
+      return result.document // <-- retourne tout l'objet document
+    } catch (error: any) {
+      let errorMessage = "Erreur inconnue lors de l'upload."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === "string") {
+        errorMessage = error
+      }
       toast({
         title: "Erreur d'upload",
-        description: `Impossible d'uploader ${file.name}: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
+        description: `Impossible d'uploader ${file.name}: ${errorMessage}`,
         variant: "destructive",
       })
+      console.error("❌ Erreur upload:", error)
       return null
     } finally {
       setUploadingFiles((prev) => {
@@ -160,30 +220,32 @@ export default function NouvelleDemandePage() {
     console.log("📤 Upload fichier:", { documentType, fileName: file.name })
 
     // Upload du fichier
-    const fileUrl = await uploadFile(file, documentType)
+    const documentData = await uploadFile(file, documentType)
 
-    if (fileUrl) {
-      // Mettre à jour l'état selon le type de demande avec l'URL
+    if (documentData) {
+      // documentData contient { id, url, nom, type, taille }
       if (documentType === "fichier_justificatif") {
-        setCongeData((prev) => ({ 
-          ...prev, 
+        setCongeData((prev) => ({
+          ...prev,
           fichier_justificatif: file,
-          fichier_justificatif_url: fileUrl 
+          fichier_justificatif_url: documentData.url,
+          fichier_justificatif_id: documentData.id, // <-- ajoute l'id
         }))
       } else if (documentType === "document_prolongation") {
-        setProlongationData((prev) => ({ 
-          ...prev, 
+        setProlongationData((prev) => ({
+          ...prev,
           document_prolongation: file,
-          document_prolongation_url: fileUrl 
+          document_prolongation_url: documentData.url,
+          document_prolongation_id: documentData.id, // <-- ajoute l'id
         }))
       } else {
         setDocuments((prev) => ({
           ...prev,
           [documentType]: file,
-          [`${documentType}_url`]: fileUrl,
+          [`${documentType}_url`]: documentData.url,
+          [`${documentType}_id`]: documentData.id, // <-- ajoute l'id
         }))
       }
-
       toast({
         title: "Succès",
         description: `${file.name} uploadé avec succès`,
@@ -313,17 +375,40 @@ export default function NouvelleDemandePage() {
         default:
           titre = `Demande de ${demandType.replace("_", " ")}`
       }
+const validTypes = [
+  "cv",
+  "certificat_scolarite",
+  "lettre_motivation",
+  "lettre_recommandation",
+  "dernier_diplome",
+  "document_supplementaire",
+  "piece_identite",
+  "plan_localisation"
+]
+type DocumentKey = typeof validTypes[number]
 
-      const requestData = {
-        type: demandType,
-        titre,
-        description: "",
-        documents,
-        periode,
-        congeData,
-        prolongationData,
-      }
-
+const documentsArray = validTypes
+  .filter((type) => {
+    const file = documents[type as keyof DocumentsState]
+    const docId = documents[`${type}_id` as keyof DocumentsState]
+    return file && docId
+  })
+  .map((type) => ({
+    type,
+    nom: (documents[type as keyof DocumentsState] as File)?.name || "",
+    document_id: documents[`${type}_id` as keyof DocumentsState],
+    obligatoire: true,
+  }))
+  
+const requestData = {
+  type: demandType,
+  titre,
+  description: "",
+  documents: documentsArray,
+  periode,
+  congeData,
+  prolongationData,
+}
       console.log("📤 Envoi de la demande:", requestData)
 
       const response = await fetch("/api/stagiaire/demandes", {
@@ -334,27 +419,48 @@ export default function NouvelleDemandePage() {
         body: JSON.stringify(requestData),
       })
 
-      const result = await response.json()
+      let result: any = {}
+      try {
+        result = await response.json()
+      } catch (jsonErr) {
+        // Si la réponse n'est pas du JSON
+        throw new Error("Réponse du serveur invalide (non JSON)")
+      }
+
       console.log("📥 Réponse API:", result)
 
       if (!response.ok) {
-        throw new Error(result.error || "Erreur lors de la création")
+        // Affiche le message d'erreur retourné par l'API s'il existe
+        let errorMsg = "Erreur lors de la création de la demande."
+        if (result?.error) {
+          errorMsg = result.error
+        } else if (result?.message) {
+          errorMsg = result.message
+        } else if (result?.code && result?.message) {
+          errorMsg = `[${result.code}] ${result.message}`
+        }
+        throw new Error(errorMsg)
       }
 
       toast({
         title: "Succès",
-        description: `${titre} soumise avec succès`,
+        description: "Votre demande a été envoyée avec succès.",
       })
-
-      console.log("✅ Demande créée avec succès, redirection...")
       router.push("/stagiaire/demandes")
-    } catch (error) {
-      console.error("❌ Erreur lors de la soumission:", error)
+    } catch (error: any) {
+      // Gestion d'erreur explicite
+      let errorMessage = "Erreur lors de la soumission."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === "string") {
+        errorMessage = error
+      }
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Erreur lors de la soumission",
+        description: errorMessage,
         variant: "destructive",
       })
+      console.error("❌ Erreur lors de la soumission:", error)
     } finally {
       setLoading(false)
     }

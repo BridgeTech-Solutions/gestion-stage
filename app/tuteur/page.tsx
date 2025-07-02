@@ -79,7 +79,7 @@ export default function TuteurDashboard() {
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Mes stagiaires</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -90,7 +90,7 @@ export default function TuteurDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Demandes</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
@@ -101,7 +101,7 @@ export default function TuteurDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Évaluations</CardTitle>
               <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -115,7 +115,7 @@ export default function TuteurDashboard() {
 
         {/* Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Mes stagiaires</CardTitle>
               <CardDescription>Gérer et suivre mes stagiaires</CardDescription>
@@ -128,7 +128,7 @@ export default function TuteurDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Demandes</CardTitle>
               <CardDescription>Traiter les demandes de mes stagiaires</CardDescription>
@@ -141,7 +141,7 @@ export default function TuteurDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Évaluations</CardTitle>
               <CardDescription>Évaluer les performances des stagiaires</CardDescription>
@@ -154,7 +154,7 @@ export default function TuteurDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle>Planning</CardTitle>
               <CardDescription>Consulter le planning des stages</CardDescription>
