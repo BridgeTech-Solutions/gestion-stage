@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,9 +94,28 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Toutes les validations passées, création de l'utilisateur...")
 
+    // Créer un client Supabase avec service role pour les opérations admin
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("❌ Variables d'environnement Supabase manquantes")
+      return NextResponse.json({ 
+        success: false,
+        error: "Configuration serveur incomplète" 
+      }, { status: 500 })
+    }
+
+    const serviceSupabase = createServiceClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
     // Créer l'utilisateur dans Supabase Auth
     console.log("🔧 Tentative de création utilisateur auth pour:", userData.email)
-    const { data: authUser, error: authUserError } = await supabase.auth.admin.createUser({
+    const { data: authUser, error: authUserError } = await serviceSupabase.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
       email_confirm: true,
@@ -163,7 +183,7 @@ export async function POST(request: NextRequest) {
       console.error("❌ Erreur création profil:", userError)
       // Supprimer l'utilisateur auth si erreur profil
       try {
-        await supabase.auth.admin.deleteUser(authUser.user!.id)
+        await serviceSupabase.auth.admin.deleteUser(authUser.user!.id)
         console.log("✅ Utilisateur auth supprimé après erreur profil")
       } catch (deleteError) {
         console.error("❌ Erreur suppression utilisateur auth:", deleteError)
