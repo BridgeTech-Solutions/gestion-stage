@@ -29,10 +29,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!userProfile || userProfile.role !== 'admin') {
-      console.log("❌ Permissions insuffisantes. Rôle:", userProfile?.role)
+    if (!userProfile) {
+      console.log("❌ Aucun profil utilisateur trouvé pour:", user.id)
       return NextResponse.json(
-        { error: 'Permissions insuffisantes - rôle admin requis' },
+        { 
+          error: 'Aucun profil utilisateur trouvé', 
+          debug: { user_id: user.id, email: user.email },
+          suggestion: 'Visitez /api/debug/admin-creation pour créer votre profil admin'
+        },
+        { status: 404 }
+      )
+    }
+
+    if (userProfile.role !== 'admin') {
+      console.log("❌ Permissions insuffisantes. Rôle actuel:", userProfile.role)
+      return NextResponse.json(
+        { 
+          error: 'Permissions insuffisantes - rôle admin requis',
+          debug: { current_role: userProfile.role, user_id: user.id },
+          suggestion: 'Visitez /api/debug/admin-creation pour obtenir les droits admin'
+        },
         { status: 403 }
       )
     }
@@ -40,7 +56,11 @@ export async function POST(request: NextRequest) {
     if (!userProfile.is_active) {
       console.log("❌ Compte admin inactif")
       return NextResponse.json(
-        { error: 'Compte administrateur inactif' },
+        { 
+          error: 'Compte administrateur inactif',
+          debug: { is_active: userProfile.is_active, user_id: user.id },
+          suggestion: 'Visitez /api/debug/admin-creation pour activer votre compte'
+        },
         { status: 403 }
       )
     }
