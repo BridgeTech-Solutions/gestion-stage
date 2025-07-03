@@ -34,50 +34,85 @@ export default function RHDocumentsPage() {
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const router = useRouter()
+  const [router] = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!session) {
-        router.push("/auth/login")
-        return
-      }
+      try {
+        const response = await fetch("/api/auth/user", {
+          method: "GET",
+          credentials: "include"
+        })
 
-      const { data: profile } = await supabase.from("users").select("*").eq("id", session.user.id).single()
-      if (!profile || profile.role !== "rh") {
-        router.push("/auth/login")
-        return
-      }
+        if (!response.ok) {
+          router.push("/auth/login")
+          return
+        }
 
-      setUser(profile)
-      await loadDocuments()
-      setLoading(false)
+        const { user } = await response.json()
+
+        if (!user || user.role !== "rh") {
+          router.push("/auth/login")
+          return
+        }
+
+        setUser(user)
+        await loadDocuments()
+        setLoading(false)
+      } catch (error) {
+        console.error("💥 Erreur auth:", error)
+        router.push("/auth/login")
+      }
     }
 
     checkAuth()
-  }, [router, supabase])
+  }, [router])
 
   const loadDocuments = async () => {
     try {
-      const response = await fetch("/api/rh/documents", { credentials: "include" })
-      const result = await response.json()
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Erreur lors du chargement des documents")
+      console.log("🔍 Chargement des documents...")
+
+      const response = await fetch('/api/documents', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log("📋 Réponse documents:", response.status)
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors du chargement")
       }
-      setDocuments(result.data || [])
-      setFilteredDocuments(result.data || [])
+
+      if (data.success) {
+        setDocuments(data.documents || [])
+      } else {
+        setDocuments([])
+        setError(data.error || "Erreur lors du chargement")
+      }
+
+      const documentsData = data.data || []
+      console.log("✅ Documents chargés:", documentsData.length)
+
+      setDocuments(documentsData)
+      setFilteredDocuments(documentsData)
     } catch (error) {
-      console.error("Erreur lors du chargement des documents:", error)
+      console.error("💥 Erreur lors du chargement des documents:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger les documents",
+        description: "Impossible de charger les documents: " + error.message,
         variant: "destructive",
       })
+      // Définir un tableau vide en cas d'erreur
+      setDocuments([])
+      setFilteredDocuments([])
     }
   }
 
@@ -110,10 +145,14 @@ export default function RHDocumentsPage() {
 
   const handleDownload = async (document: Document) => {
     try {
-      const { data, error } = await supabase.storage.from("documents").download(document.url)
-      if (error) throw error
+      const response = await fetch(`/api/documents/${document.id}/download`)
 
-      const url = URL.createObjectURL(data)
+      if (!response.ok) {
+        throw new Error("Erreur lors du téléchargement")
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
       a.download = document.nom
@@ -121,11 +160,42 @@ export default function RHDocumentsPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+
+      toast({
+        title: "Succès",
+        description: "Document téléchargé avec succès",
+      })
     } catch (error) {
-      console.error("Erreur lors du téléchargement:", error)
+      console.error("Erreur téléchargement:", error)
       toast({
         title: "Erreur",
         description: "Impossible de télécharger le document",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleView = async (document: Document) => {
+    try {
+      const response = await fetch(`/api/documents/${document.id}/content`)
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        URL.revokeObjectURL(url)
+      } else {
+        toast({
+          title: "Information",
+          description: "Prévisualisation non disponible pour ce type de fichier",
+          variant: "default",
+        })
+      }
+    } catch (error) {
+      console.error("Erreur prévisualisation:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de prévisualiser le document",
         variant: "destructive",
       })
     }
@@ -184,18 +254,6 @@ export default function RHDocumentsPage() {
               <Button className="w-full" onClick={() => router.push("/rh/documents/upload")}>
                 <Upload className="mr-2 h-4 w-4" />
                 Télécharger
-              </Button>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Archives</CardTitle>
-              <CardDescription>Consulter les documents archivés</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button className="w-full" variant="outline" onClick={() => router.push("/rh/documents/archives")}>
-                <FileText className="mr-2 h-4 w-4" />
-                Voir archives
               </Button>
             </CardContent>
           </Card>
@@ -262,7 +320,7 @@ export default function RHDocumentsPage() {
                         <Button variant="outline" size="sm" onClick={() => handleDownload(document)}>
                           <Download className="h-4 w-4" />
                         </Button>
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" onClick={() => handleView(document)}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button variant="outline" size="sm">

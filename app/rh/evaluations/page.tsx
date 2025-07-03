@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, FileText, Search, Filter, Eye, Edit, Trash2, Plus } from "lucide-react"
-
+import { Header } from "@/components/layout/header"
 
 interface Evaluation {
   id: string
@@ -44,15 +44,28 @@ export default function RHEvaluationsPage() {
   const [user, setUser] = useState<any>(null)
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const stagiaireFilter = searchParams.get('stagiaire')
 
   useEffect(() => {
     fetchUser()
-    fetchEvaluations()
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      fetchEvaluations()
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (user && stagiaireFilter) {
+      fetchEvaluations()
+    }
+  }, [stagiaireFilter])
 
   const fetchUser = async () => {
     try {
-      const response = await fetch("/api/auth/user", { credentials: "include" })
+      const response = await fetch("/api/auth/user")
       if (response.ok) {
         const userData = await response.json()
         setUser(userData)
@@ -64,17 +77,40 @@ export default function RHEvaluationsPage() {
 
   const fetchEvaluations = async () => {
     try {
-      const response = await fetch("/api/evaluations", { credentials: "include" })
-      
+      setLoading(true)
+      setError(null)
+
+      let url = "/api/evaluations"
+      if (stagiaireFilter) {
+        url += `?stagiaire_id=${stagiaireFilter}`
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
       if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des évaluations")
+        const errorData = await response.json().catch(() => ({ error: 'Erreur de communication' }))
+        throw new Error(errorData.error || `Erreur ${response.status}`)
       }
 
       const data = await response.json()
-      setEvaluations(data.evaluations || [])
+      console.log("✅ Données évaluations reçues:", data)
+
+      // Gérer les réponses même en cas d'erreur serveur
+      if (data.success === false && data.evaluations) {
+        setEvaluations(data.evaluations)
+        setError(data.error || "Erreur lors du chargement")
+      } else if (data.success) {
+        setEvaluations(data.evaluations || [])
+      } else {
+        throw new Error(data.error || "Erreur lors de la récupération")
+      }
     } catch (error) {
-      console.error("Erreur:", error)
-      setError("Erreur lors du chargement des évaluations")
+      console.error("❌ Erreur fetchEvaluations:", error)
+      setError(error instanceof Error ? error.message : "Erreur lors du chargement des évaluations")
     } finally {
       setLoading(false)
     }
