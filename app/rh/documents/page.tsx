@@ -34,7 +34,7 @@ export default function RHDocumentsPage() {
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [router] = useRouter()
+  const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
   const [error, setError] = useState<string | null>(null)
@@ -92,17 +92,15 @@ export default function RHDocumentsPage() {
       }
 
       if (data.success) {
-        setDocuments(data.documents || [])
+        const documentsData = data.documents || data.data || []
+        console.log("✅ Documents chargés:", documentsData.length)
+        setDocuments(documentsData)
+        setFilteredDocuments(documentsData)
       } else {
         setDocuments([])
+        setFilteredDocuments([])
         setError(data.error || "Erreur lors du chargement")
       }
-
-      const documentsData = data.data || []
-      console.log("✅ Documents chargés:", documentsData.length)
-
-      setDocuments(documentsData)
-      setFilteredDocuments(documentsData)
     } catch (error) {
       console.error("💥 Erreur lors du chargement des documents:", error)
       toast({
@@ -201,7 +199,7 @@ export default function RHDocumentsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -279,7 +277,7 @@ export default function RHDocumentsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Documents ({filteredDocuments.length})
+              Documents ({Array.isArray(filteredDocuments) ? filteredDocuments.length : 0})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -296,7 +294,7 @@ export default function RHDocumentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDocuments.map((document) => (
+                {Array.isArray(filteredDocuments) && filteredDocuments.map((document) => (
                   <TableRow key={document.id}>
                     <TableCell className="font-medium">{document.nom}</TableCell>
                     <TableCell>
@@ -330,6 +328,13 @@ export default function RHDocumentsPage() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {(!Array.isArray(filteredDocuments) || filteredDocuments.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-gray-500">
+                      Aucun document trouvé
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>
