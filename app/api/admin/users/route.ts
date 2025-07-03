@@ -1,32 +1,47 @@
- import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Vérifier la session d'abord
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
+      console.log("❌ Pas de session utilisateur:", sessionError?.message)
       return NextResponse.json(
-        { error: 'Non autorisé' },
+        { error: 'Non authentifié' },
         { status: 401 }
       )
     }
 
+    console.log("✅ Session trouvée pour:", session.user.email)
+
     // Vérifier les permissions admin
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .single()
 
+    if (profileError) {
+      console.error("❌ Erreur récupération profil:", profileError)
+      return NextResponse.json(
+        { error: 'Erreur de vérification des permissions' },
+        { status: 500 }
+      )
+    }
+
     if (!userProfile || userProfile.role !== 'admin') {
+      console.log("❌ Utilisateur non autorisé:", userProfile?.role)
       return NextResponse.json(
         { error: 'Permissions insuffisantes' },
         { status: 403 }
       )
     }
+
+    console.log("✅ Utilisateur admin confirmé")
 
     const userData = await request.json()
     console.log("📤 Création d'utilisateur:", userData)
