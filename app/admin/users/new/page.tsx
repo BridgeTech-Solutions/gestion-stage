@@ -50,54 +50,34 @@ export default function NewUserPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("🔍 Vérification de l'authentification admin...")
-
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-
+        const { data: { session } } = await supabase.auth.getSession()
+        
         if (!session) {
-          console.log("❌ Pas de session")
           router.push("/auth/login")
           return
         }
 
-        console.log("✅ Session trouvée:", session.user.email)
-
-        const { data: profile, error: profileError } = await supabase
+        const { data: profile } = await supabase
           .from("users")
           .select("*")
           .eq("id", session.user.id)
           .single()
 
-        if (profileError || !profile) {
-          console.error("❌ Erreur récupération profil:", profileError)
-          router.push("/auth/login")
-          return
-        }
-
-        if (profile.role !== "admin" || !profile.is_active) {
-          console.log("❌ Profil non admin:", profile.role)
-          toast({
-            title: "Accès refusé",
-            description: "Accès administrateur requis",
-            variant: "destructive"
-          })
+        if (!profile || profile.role !== "admin") {
           router.push("/")
           return
         }
 
-        console.log("✅ Profil admin confirmé")
         setUser(profile)
         setLoading(false)
       } catch (error) {
-        console.error("💥 Erreur auth check:", error)
+        console.error("Erreur auth:", error)
         router.push("/auth/login")
       }
     }
 
     checkAuth()
-  }, [router, toast, supabase])
+  }, [router, supabase])
 
   const validateForm = (): boolean => {
     const newErrors: Partial<UserFormData> = {}
@@ -141,50 +121,20 @@ export default function NewUserPage() {
     setSaving(true)
 
     try {
-      console.log("🚀 Envoi des données utilisateur:", { ...formData, password: "[HIDDEN]" })
-
       // Créer l'utilisateur avec l'API
       const response = await fetch("/api/admin/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
+        credentials: "include"
       })
 
-      let result
-      try {
-        result = await response.json()
-      } catch (parseError) {
-        console.error("❌ Erreur parsing JSON:", parseError)
-        throw new Error("Réponse serveur invalide")
-      }
-      
-      console.log("📥 Réponse API:", { status: response.status, result })
+      const result = await response.json()
 
-      if (!response.ok) {
-        let errorMessage = result?.error || "Erreur lors de la création"
-
-        // Messages d'erreur plus spécifiques
-        if (response.status === 401) {
-          errorMessage = "Non authentifié - veuillez vous reconnecter"
-        } else if (response.status === 403) {
-          errorMessage = "Accès refusé - permissions administrateur requises"
-        } else if (response.status === 500) {
-          errorMessage = "Erreur serveur - veuillez réessayer"
-        }
-
-        console.error("❌ Erreur API détaillée:", {
-          status: response.status,
-          error: result?.error,
-          details: result?.details
-        })
-
-        throw new Error(errorMessage)
-      }
-
-      if (!result.success) {
-        throw new Error(result.error || "Échec de la création")
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Erreur lors de la création")
       }
 
       toast({
@@ -194,7 +144,7 @@ export default function NewUserPage() {
 
       router.push("/admin/users")
     } catch (error: any) {
-      console.error("❌ Erreur création utilisateur:", error)
+      console.error("Erreur création utilisateur:", error)
       toast({
         title: "Erreur",
         description: error.message || "Impossible de créer l'utilisateur",

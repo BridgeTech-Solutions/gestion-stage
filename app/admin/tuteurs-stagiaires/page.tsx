@@ -75,16 +75,16 @@ export default function TuteursStagiairesPage() {
       const response = await fetch("/api/admin/stagiaires")
       const result = await response.json()
 
-      if (result.success && result.data) {
-        setStagiaires(result.data)
+      if (response.ok) {
+        setStagiaires(result.data || [])
+        // Initialiser les attributions actuelles
         const currentAttributions: { [key: string]: string } = {}
         result.data?.forEach((stagiaire: Stagiaire) => {
-          currentAttributions[stagiaire.id] = stagiaire.tuteur_id || ""
+          if (stagiaire.tuteur_id) {
+            currentAttributions[stagiaire.id] = stagiaire.tuteur_id
+          }
         })
         setAttributions(currentAttributions)
-      } else {
-        console.error("Erreur chargement stagiaires:", result.error)
-        setStagiaires([])
       }
     } catch (error) {
       console.error("Erreur chargement stagiaires:", error)

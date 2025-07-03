@@ -11,6 +11,19 @@ import { BackButton } from "@/components/ui/back-button"
 import { toast } from "@/hooks/use-toast"
 import { FileText, User, MessageSquare, Download } from "lucide-react"
 
+interface Document {
+  id: string
+  nom: string
+  type: string
+  taille: number
+  url?: string
+  chemin?: string
+  user_id: string
+  demande_id?: string
+  is_public?: boolean
+  created_at: string
+}
+
 interface Demande {
   id: string
   type: string
@@ -43,17 +56,29 @@ export default function DemandeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [demande, setDemande] = useState<Demande | null>(null)
+  const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [statut, setStatut] = useState("")
   const [commentaireReponse, setCommentaireReponse] = useState("")
-  const [documents, setDocuments] = useState<any[]>([])
-  const [loadingDocuments, setLoadingDocuments] = useState(false)
 
   useEffect(() => {
     loadDemande()
     loadDocuments()
   }, [params.id])
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch(`/api/documents?demande_id=${params.id}`, { credentials: "include" })
+      const data = await response.json()
+      if (response.ok && data.data) {
+        setDocuments(data.data)
+      } else {
+        setDocuments([])
+      }
+    } catch (error) {
+      setDocuments([])
+    }
+  }
 
   const loadDemande = async () => {
     try {
@@ -76,50 +101,6 @@ export default function DemandeDetailPage() {
       })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const loadDocuments = async () => {
-    setLoadingDocuments(true)
-    try {
-      const response = await fetch(`/api/demandes/${params.id}/documents`)
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        setDocuments(data.documents || [])
-      } else {
-        setDocuments([])
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des documents:", error)
-      setDocuments([])
-    } finally {
-      setLoadingDocuments(false)
-    }
-  }
-
-  const handleDownloadDocument = async (documentId: string, fileName: string) => {
-    try {
-      const response = await fetch(`/api/documents/${documentId}/download`)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = fileName
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        throw new Error("Erreur lors du téléchargement")
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger le document",
-        variant: "destructive",
-      })
     }
   }
 
@@ -216,50 +197,6 @@ export default function DemandeDetailPage() {
         </div>
       </div>
     )
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR")
-  }
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
-
-  const handleDownloadDocument2 = async (document: any) => {
-    try {
-      const response = await fetch(`/api/documents/${document.id}/download`)
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du téléchargement")
-      }
-
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const a = window.document.createElement("a")
-      a.href = url
-      a.download = document.nom
-      window.document.body.appendChild(a)
-      a.click()
-      window.document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      toast({
-        title: "Succès",
-        description: "Document téléchargé avec succès",
-      })
-    } catch (error) {
-      console.error("Erreur téléchargement:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de télécharger le document",
-        variant: "destructive",
-      })
-    }
   }
 
   return (
@@ -384,48 +321,30 @@ export default function DemandeDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Documents fournis */}
+      {/* Documents liés à la demande */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Documents fournis
+            Documents liés à la demande
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loadingDocuments ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <span className="ml-2">Chargement des documents...</span>
-            </div>
-          ) : documents.length > 0 ? (
+          {documents.length === 0 ? (
+            <div className="text-gray-500">Aucun document trouvé pour cette demande.</div>
+          ) : (
             <div className="grid gap-2">
-              {documents.map((doc, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{doc.nom}</p>
-                    <p className="text-sm text-gray-500">
-                      {doc.type_fichier} - {doc.taille ? Math.round(doc.taille / 1024) + ' KB' : 'Taille inconnue'}
-                    </p>
-                    {doc.type_document_demande && (
-                      <p className="text-xs text-blue-600">{doc.type_document_demande}</p>
-                    )}
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDownloadDocument(doc.id, doc.nom)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger
-                  </Button>
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
+                  <span>{doc.nom}</span>
+                  <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </a>
                 </div>
               ))}
-            </div>
-          ) : (
-            <div className="text-center py-6">
-              <Download className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500">Aucun document fourni</p>
             </div>
           )}
         </CardContent>
