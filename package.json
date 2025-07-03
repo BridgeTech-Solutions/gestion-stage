@@ -64,7 +64,8 @@
     "use-sync-external-store": "latest",
     "vaul": "latest",
     "zod": "latest",
-    "zustand": "latest"
+    "zustand": "latest",
+    "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/node": "^22",
