@@ -50,16 +50,34 @@ export default function NewUserPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/user")
-        
-        if (!response.ok) {
+        console.log("🔍 Vérification de l'authentification admin...")
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          console.log("❌ Pas de session")
           router.push("/auth/login")
           return
         }
 
-        const { user } = await response.json()
+        console.log("✅ Session trouvée:", session.user.email)
 
-        if (!user || user.role !== "admin" || !user.is_active) {
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+
+        if (profileError || !profile) {
+          console.error("❌ Erreur récupération profil:", profileError)
+          router.push("/auth/login")
+          return
+        }
+
+        if (profile.role !== "admin" || !profile.is_active) {
+          console.log("❌ Profil non admin:", profile.role)
           toast({
             title: "Accès refusé",
             description: "Accès administrateur requis",
@@ -69,15 +87,17 @@ export default function NewUserPage() {
           return
         }
 
-        setUser(user)
+        console.log("✅ Profil admin confirmé")
+        setUser(profile)
         setLoading(false)
       } catch (error) {
+        console.error("💥 Erreur auth check:", error)
         router.push("/auth/login")
       }
     }
 
     checkAuth()
-  }, [router, toast])
+  }, [router, toast, supabase])
 
   const validateForm = (): boolean => {
     const newErrors: Partial<UserFormData> = {}
