@@ -1,62 +1,69 @@
-import { NextResponse } from "next/server"
+
+import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
-    const supabase = await createClient()
-
+    const supabase = createClient()
+    
     // Vérifier l'authentification
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    const { data: profile } = await supabase.from("users").select("role").eq("id", session.user.id).single()
+    const { id } = params
 
-    // Récupérer les informations du document
-    const { data: document, error } = await supabase.from("documents").select("*").eq("id", params.id).single()
+    // Récupérer le document
+    const { data: document, error: docError } = await supabase
+      .from("documents")
+      .select("*")
+      .eq("id", id)
+      .single()
 
-    if (error || !document) {
+    if (docError || !document) {
       return NextResponse.json({ error: "Document non trouvé" }, { status: 404 })
     }
 
     // Vérifier les permissions
-    const canAccess =
-      document.user_id === session.user.id || // Propriétaire
-      document.is_public || // Document public
-      (profile && ["admin", "rh", "tuteur"].includes(profile.role)) // Rôles autorisés
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+
+    const canAccess = 
+      document.user_id === user.id ||
+      document.is_public ||
+      userProfile?.role === 'admin' ||
+      userProfile?.role === 'rh'
 
     if (!canAccess) {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
     }
 
-    // Télécharger depuis Supabase Storage
-    if (document.chemin_fichier) {
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from("documents")
-        .download(document.chemin_fichier)
+    // Télécharger le fichier depuis Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from("documents")
+      .download(document.chemin_fichier)
 
-      if (downloadError) {
-        console.error("Erreur téléchargement:", downloadError)
-        return NextResponse.json({ error: "Erreur lors du téléchargement" }, { status: 500 })
-      }
-
-      const buffer = await fileData.arrayBuffer()
-
-      return new NextResponse(buffer, {
-        headers: {
-          "Content-Type": document.type_fichier || "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${document.nom}"`,
-          "Content-Length": buffer.byteLength.toString(),
-        },
-      })
+    if (downloadError || !fileData) {
+      return NextResponse.json({ error: "Erreur lors du téléchargement" }, { status: 500 })
     }
 
-    return NextResponse.json({ error: "Fichier non disponible" }, { status: 404 })
+    // Retourner le fichier
+    return new NextResponse(fileData, {
+      headers: {
+        'Content-Type': document.type_fichier || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${document.nom}"`,
+      },
+    })
+
   } catch (error) {
     console.error("Erreur téléchargement document:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
   }
 }

@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Non autorisé' },
+        { status: 401 }
+      )
     }
 
     // Vérifier que l'utilisateur est tuteur
@@ -19,7 +22,10 @@ export async function GET(request: NextRequest) {
       .single()
 
     if (userError || userData?.role !== 'tuteur') {
-      return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Accès non autorisé' },
+        { status: 403 }
+      )
     }
 
     const { data, error } = await supabase
@@ -36,14 +42,20 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Erreur get tuteur evaluations:', error)
-      return NextResponse.json({ success: false, error: error.message || 'Erreur lors de la récupération des évaluations' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération des évaluations' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true, data })
+    return NextResponse.json(data)
 
   } catch (error) {
     console.error('Erreur tuteur evaluations:', error)
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Erreur serveur' },
+      { status: 500 }
+    )
   }
 }
 
@@ -54,7 +66,10 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      return NextResponse.json({ success: false, error: 'Non autorisé' }, { status: 401 })
+      return NextResponse.json(
+        { error: 'Non autorisé' },
+        { status: 401 }
+      )
     }
 
     // Vérifier que l'utilisateur est tuteur
@@ -65,14 +80,20 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (userError || userData?.role !== 'tuteur') {
-      return NextResponse.json({ success: false, error: 'Accès non autorisé' }, { status: 403 })
+      return NextResponse.json(
+        { error: 'Accès non autorisé' },
+        { status: 403 }
+      )
     }
 
     const evaluationData = await request.json()
 
     // Valider les données
     if (!evaluationData.stagiaire_id || !evaluationData.periode) {
-      return NextResponse.json({ success: false, error: 'ID du stagiaire et période sont requis' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'ID du stagiaire et période sont requis' },
+        { status: 400 }
+      )
     }
 
     // Vérifier que le stagiaire appartient au tuteur
@@ -84,7 +105,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (stagiaireError || !stagiaire) {
-      return NextResponse.json({ success: false, error: 'Stagiaire non trouvé ou non assigné' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Stagiaire non trouvé ou non assigné' },
+        { status: 404 }
+      )
     }
 
     const { data, error } = await supabase
@@ -104,13 +128,19 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Erreur create tuteur evaluation:', error)
-      return NextResponse.json({ success: false, error: "Erreur lors de la création de l'évaluation" }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Erreur lors de la création de l\'évaluation' },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json({ success: true, data: data[0], message: "Évaluation créée avec succès" }, { status: 201 })
+    return NextResponse.json(data[0], { status: 201 })
 
   } catch (error) {
     console.error('Erreur create tuteur evaluation:', error)
-    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Erreur serveur' },
+      { status: 500 }
+    )
   }
 }

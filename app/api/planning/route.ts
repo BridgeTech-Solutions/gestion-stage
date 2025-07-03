@@ -24,9 +24,9 @@ export async function GET(request: NextRequest) {
       .from('planning')
       .select(`
         *,
-        stagiaire:stagiaires!inner(
-          user_id,
-          users!inner(name, email)
+        stagiaire:stagiaires(
+          id,
+          user:users!stagiaires_user_id_fkey(name, email)
         ),
         tuteur:users!planning_tuteur_id_fkey(name, email)
       `)
@@ -102,11 +102,24 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('planning')
       .insert({
-        ...planningData,
+        titre: planningData.titre,
+        description: planningData.description,
+        date_debut: planningData.date_debut,
+        date_fin: planningData.date_fin,
+        type: planningData.type || 'autre',
+        lieu: planningData.lieu,
+        status: planningData.status || 'planifie',
+        stagiaire_id: planningData.stagiaire_id || null,
         tuteur_id: user.id,
         created_at: new Date().toISOString()
       })
-      .select()
+      .select(`
+        *,
+        stagiaire:stagiaires(
+          id,
+          user:users!stagiaires_user_id_fkey(name, email)
+        )
+      `)
 
     if (error) {
       console.error('Erreur create planning:', error)

@@ -8,7 +8,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Vérifier que l'ID est un UUID valide
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(params.id)) {
-      return NextResponse.json({ success: false, error: "ID stagiaire invalide" }, { status: 400 })
+      return NextResponse.json({ error: "ID stagiaire invalide" }, { status: 400 })
     }
 
     // Vérifier l'authentification et les permissions
@@ -16,13 +16,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 
     // Récupérer le stagiaire avec relations
@@ -38,15 +38,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     if (error) {
       if (error.code === "PGRST116") {
-        return NextResponse.json({ success: false, error: "Stagiaire non trouvé" }, { status: 404 })
+        return NextResponse.json({ error: "Stagiaire non trouvé" }, { status: 404 })
       }
-      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la récupération du stagiaire" }, { status: 500 })
+      throw error
     }
 
     return NextResponse.json({ success: true, data: stagiaire })
   } catch (error) {
     console.error("Erreur lors de la récupération du stagiaire:", error)
-    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }
 
@@ -59,13 +59,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
     }
 
     const body = await request.json()
@@ -75,7 +75,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (!entreprise || !poste || !date_debut || !date_fin) {
       return NextResponse.json(
         {
-          success: false,
           error: "Les champs entreprise, poste, date de début et date de fin sont obligatoires",
         },
         { status: 400 },
@@ -110,9 +109,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       `)
       .single()
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la mise à jour du stagiaire" }, { status: 500 })
-    }
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
@@ -121,6 +118,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     })
   } catch (error) {
     console.error("Erreur lors de la mise à jour du stagiaire:", error)
-    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
   }
 }
