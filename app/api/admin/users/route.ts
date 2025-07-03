@@ -15,15 +15,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier les permissions admin
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, is_active')
       .eq('id', user.id)
       .single()
 
-    if (!userProfile || userProfile.role !== 'admin') {
+    if (profileError) {
+      console.error("❌ Erreur récupération profil:", profileError)
       return NextResponse.json(
-        { error: 'Permissions insuffisantes' },
+        { error: 'Erreur récupération profil utilisateur' },
+        { status: 500 }
+      )
+    }
+
+    if (!userProfile || userProfile.role !== 'admin') {
+      console.log("❌ Permissions insuffisantes. Rôle:", userProfile?.role)
+      return NextResponse.json(
+        { error: 'Permissions insuffisantes - rôle admin requis' },
+        { status: 403 }
+      )
+    }
+
+    if (!userProfile.is_active) {
+      console.log("❌ Compte admin inactif")
+      return NextResponse.json(
+        { error: 'Compte administrateur inactif' },
         { status: 403 }
       )
     }
