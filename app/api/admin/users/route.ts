@@ -1,55 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { createClient as createServiceClient } from "@supabase/supabase-js"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🚀 API Admin Users POST - Début")
     const supabase = await createClient()
 
-    // Utiliser getSession() pour être cohérent avec la page
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
 
-    if (sessionError || !session?.user) {
-      console.log("❌ Erreur session:", sessionError?.message)
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Non autorisé - session invalide', success: false },
+        { error: 'Non autorisé' },
         { status: 401 }
       )
     }
 
-    const user = session.user
-    console.log("✅ Utilisateur authentifié via session:", user.email)
-
     // Vérifier les permissions admin
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile } = await supabase
       .from('users')
-      .select('role, is_active, name')
+      .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profileError) {
-      console.error("❌ Erreur récupération profil:", profileError)
-      return NextResponse.json(
-        { error: 'Erreur récupération profil', success: false },
-        { status: 500 }
-      )
-    }
-
-    console.log("📋 Profil utilisateur:", userProfile)
-
     if (!userProfile || userProfile.role !== 'admin') {
-      console.log("❌ Permissions insuffisantes. Rôle:", userProfile?.role)
       return NextResponse.json(
-        { error: 'Permissions insuffisantes - rôle admin requis', success: false },
-        { status: 403 }
-      )
-    }
-
-    if (!userProfile.is_active) {
-      console.log("❌ Compte inactif")
-      return NextResponse.json(
-        { error: 'Compte administrateur inactif', success: false },
+        { error: 'Permissions insuffisantes' },
         { status: 403 }
       )
     }
@@ -85,37 +59,14 @@ export async function POST(request: NextRequest) {
     // Validation du rôle
     const validRoles = ['admin', 'rh', 'tuteur', 'stagiaire']
     if (!validRoles.includes(userData.role)) {
-      console.log("❌ Rôle invalide:", userData.role)
       return NextResponse.json({ 
         success: false,
         error: "Rôle invalide" 
       }, { status: 400 })
     }
 
-    console.log("✅ Toutes les validations passées, création de l'utilisateur...")
-
-    // Créer un client Supabase avec service role pour les opérations admin
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("❌ Variables d'environnement Supabase manquantes")
-      return NextResponse.json({ 
-        success: false,
-        error: "Configuration serveur incomplète" 
-      }, { status: 500 })
-    }
-
-    const serviceSupabase = createServiceClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-
     // Créer l'utilisateur dans Supabase Auth
-    console.log("🔧 Tentative de création utilisateur auth pour:", userData.email)
-    const { data: authUser, error: authUserError } = await serviceSupabase.auth.admin.createUser({
+    const { data: authUser, error: authUserError } = await supabase.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
       email_confirm: true,
@@ -126,30 +77,11 @@ export async function POST(request: NextRequest) {
     })
 
     if (authUserError) {
-      console.error("❌ Erreur création auth complète:", {
-        message: authUserError.message,
-        status: authUserError.status,
-        code: authUserError.code,
-        details: authUserError
-      })
-      
-      // Gérer les erreurs spécifiques
-      let errorMessage = authUserError.message || "Erreur lors de la création du compte"
-      let statusCode = 400
-      
-      if (authUserError.message?.includes("not allowed")) {
-        errorMessage = "Création d'utilisateur non autorisée - vérifiez les permissions administrateur"
-        statusCode = 403
-      } else if (authUserError.message?.includes("already exists")) {
-        errorMessage = "Un utilisateur avec cet email existe déjà"
-        statusCode = 409
-      }
-      
+      console.error("❌ Erreur création auth:", authUserError)
       return NextResponse.json({ 
         success: false,
-        error: errorMessage,
-        debug_error: authUserError.message
-      }, { status: statusCode })
+        error: authUserError.message || "Erreur lors de la création du compte" 
+      }, { status: 400 })
     }
 
     if (!authUser.user) {
@@ -183,7 +115,7 @@ export async function POST(request: NextRequest) {
       console.error("❌ Erreur création profil:", userError)
       // Supprimer l'utilisateur auth si erreur profil
       try {
-        await serviceSupabase.auth.admin.deleteUser(authUser.user!.id)
+        await supabase.auth.admin.deleteUser(authUser.user!.id)
         console.log("✅ Utilisateur auth supprimé après erreur profil")
       } catch (deleteError) {
         console.error("❌ Erreur suppression utilisateur auth:", deleteError)
