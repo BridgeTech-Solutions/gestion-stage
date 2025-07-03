@@ -112,23 +112,30 @@ export default function AdminUsersPage() {
       console.log("📡 Chargement des utilisateurs...")
 
       const response = await fetch("/api/admin/users")
-      const data = await response.json()
+      console.log("📡 Statut réponse:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ Erreur HTTP:", response.status, errorText)
+        throw new Error(`Erreur ${response.status}: ${errorText}`)
+      }
 
-      console.log("📊 Réponse API:", { success: data.success, count: data.data?.length })
+      const data = await response.json()
+      console.log("📊 Réponse API complète:", data)
 
       if (data.success) {
-        console.log("✅ Utilisateurs chargés:", data.data.length)
-        setUsers(data.data)
-        setFilteredUsers(data.data)
+        console.log("✅ Utilisateurs chargés:", data.data?.length || 0)
+        setUsers(data.data || [])
+        setFilteredUsers(data.data || [])
       } else {
         console.error("❌ Erreur API:", data.error)
-        throw new Error(data.error)
+        throw new Error(data.error || "Erreur inconnue")
       }
     } catch (error) {
       console.error("💥 Erreur lors du chargement des utilisateurs:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger les utilisateurs",
+        description: `Impossible de charger les utilisateurs: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
         variant: "destructive",
       })
     }
@@ -238,10 +245,19 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement de la page des utilisateurs...</p>
+        </div>
       </div>
     )
   }
+
+  console.log("🎯 Rendu de la page users avec:", { 
+    userCount: users.length, 
+    filteredCount: filteredUsers.length,
+    currentUser: user?.email 
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
