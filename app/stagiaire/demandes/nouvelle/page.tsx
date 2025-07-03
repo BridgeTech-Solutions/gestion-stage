@@ -397,6 +397,7 @@ const documentsArray = validTypes
     type,
     nom: (documents[type as keyof DocumentsState] as File)?.name || "",
     document_id: documents[`${type}_id` as keyof DocumentsState],
+    url: documents[`${type}_url` as keyof DocumentsState], // <-- AJOUTE CETTE LIGNE
     obligatoire: true,
   }))
   

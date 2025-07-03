@@ -1,5 +1,6 @@
 "use client"
 
+// Importation des hooks React, outils de navigation, composants UI, hooks custom et Supabase
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,9 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { BackButton } from "@/components/ui/back-button"
 import { Header } from "@/components/layout/header"
 import { useToast } from "@/hooks/use-toast"
-import { FileText, User, Calendar, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react"
+import { FileText, User, Calendar, CheckCircle, XCircle, Clock, AlertCircle, Download, ExternalLink } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 
+// Définition du type pour les détails d'une demande
 interface DemandeDetail {
   id: string
   type: string
@@ -19,7 +21,7 @@ interface DemandeDetail {
   date_demande: string
   date_reponse?: string
   commentaire_reponse?: string
-  documents_requis?: string[]
+  documents_requis?: { documents: any[] }
   tuteur?: {
     name: string
     email: string
@@ -27,6 +29,7 @@ interface DemandeDetail {
 }
 
 export default function StagiaireDemandeDetailPage() {
+  // États pour l'utilisateur, le stagiaire, la demande et le chargement
   const [user, setUser] = useState<any>(null)
   const [stagiaireInfo, setStagiaireInfo] = useState<any>(null)
   const [demande, setDemande] = useState<DemandeDetail | null>(null)
@@ -36,8 +39,10 @@ export default function StagiaireDemandeDetailPage() {
   const supabase = createClient()
   const { toast } = useToast()
 
+  // Effet pour vérifier l'authentification et charger la demande à l'ouverture de la page
   useEffect(() => {
     const checkAuth = async () => {
+      // Vérifie la session utilisateur
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -46,6 +51,7 @@ export default function StagiaireDemandeDetailPage() {
         return
       }
 
+      // Récupère le profil utilisateur
       const { data: profile } = await supabase.from("users").select("*").eq("id", session.user.id).single()
       if (!profile) {
         router.push("/auth/login")
@@ -54,17 +60,17 @@ export default function StagiaireDemandeDetailPage() {
 
       setUser(profile)
 
-      // Récupérer les informations du stagiaire
+      // Récupère les infos du stagiaire lié à l'utilisateur
       const { data: stagiaire } = await supabase.from("stagiaires").select("*").eq("user_id", profile.id).single()
       setStagiaireInfo(stagiaire)
 
-      // Vérifier que l'ID n'est pas une route spéciale
+      // Redirige si l'ID est "nouvelle"
       if (params.id === "nouvelle") {
         router.push("/stagiaire/demandes/nouvelle")
         return
       }
 
-      // Vérifier que l'ID est un UUID valide
+      // Vérifie que l'ID est bien un UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
       if (!uuidRegex.test(params.id as string)) {
         toast({
@@ -76,6 +82,7 @@ export default function StagiaireDemandeDetailPage() {
         return
       }
 
+      // Charge la demande si le stagiaire existe
       if (stagiaire) {
         await loadDemande(stagiaire.id)
       }
@@ -86,6 +93,7 @@ export default function StagiaireDemandeDetailPage() {
     checkAuth()
   }, [params.id])
 
+  // Fonction pour charger les détails de la demande depuis Supabase
   const loadDemande = async (stagiaireId: string) => {
     try {
       const { data, error } = await supabase
@@ -121,6 +129,7 @@ export default function StagiaireDemandeDetailPage() {
     }
   }
 
+  // Fonctions utilitaires pour la couleur des badges selon le statut/type
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "en_attente":
@@ -155,6 +164,7 @@ export default function StagiaireDemandeDetailPage() {
     }
   }
 
+  // Fonction pour formater les dates en français
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR", {
       year: "numeric",
@@ -165,6 +175,7 @@ export default function StagiaireDemandeDetailPage() {
     })
   }
 
+  // Affichage d'un loader si la page charge
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -173,6 +184,7 @@ export default function StagiaireDemandeDetailPage() {
     )
   }
 
+  // Affichage si le profil stagiaire est incomplet
   if (!stagiaireInfo) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -193,6 +205,7 @@ export default function StagiaireDemandeDetailPage() {
     )
   }
 
+  // Affichage si la demande n'est pas trouvée
   if (!demande) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -211,17 +224,18 @@ export default function StagiaireDemandeDetailPage() {
     )
   }
 
+  // Affichage principal de la page de détail de la demande
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
 
-      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <main className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-zinc-950 min-h-screen">
         <div className="mb-6">
           <BackButton href="/stagiaire/demandes" />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Informations principales */}
+          {/* Colonne principale : infos de la demande */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
               <CardHeader>
@@ -272,33 +286,56 @@ export default function StagiaireDemandeDetailPage() {
               </CardContent>
             </Card>
 
-            {demande.documents_requis && demande.documents_requis.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Documents fournis</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {demande.documents_requis.map((doc, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{doc}</span>
+            {/* Affichage des documents requis si présents */}
+            {demande.documents_requis &&
+              Array.isArray((demande.documents_requis as any).documents) &&
+              (demande.documents_requis as any).documents.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Documents fournis</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {(demande.documents_requis as any).documents.map((doc: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium">{doc.nom || doc.type}</span>
+                          </div>
+                          {doc.url ? (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Ouvrir
+                              </a>
+                              <a
+                                href={doc.url}
+                                download={doc.nom}
+                                className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Télécharger
+                              </a>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              Non disponible
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            Fourni
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
           </div>
 
-          {/* Sidebar */}
+          {/* Colonne de droite : sidebar avec tuteur, statut, infos */}
           <div className="space-y-6">
             {demande.tuteur && (
               <Card>

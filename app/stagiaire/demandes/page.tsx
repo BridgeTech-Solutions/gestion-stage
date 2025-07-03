@@ -1,5 +1,6 @@
 "use client"
 
+// Import des hooks React, composants UI, icônes, Supabase et outils divers
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +12,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
+// Définition du type d'une demande
 interface Demande {
   id: string
   type: string
@@ -23,6 +25,7 @@ interface Demande {
 }
 
 export default function StagiaireDemandesPage() {
+  // États pour l'utilisateur, le stagiaire, la liste des demandes et le chargement
   const [user, setUser] = useState<any>(null)
   const [stagiaireInfo, setStagiaireInfo] = useState<any>(null)
   const [demandes, setDemandes] = useState<Demande[]>([])
@@ -31,8 +34,10 @@ export default function StagiaireDemandesPage() {
   const supabase = createClient()
   const { toast } = useToast()
 
+  // Effet pour vérifier l'authentification et charger les demandes du stagiaire
   useEffect(() => {
     const checkAuth = async () => {
+      // Vérifie la session utilisateur
       const {
         data: { session },
       } = await supabase.auth.getSession()
@@ -41,6 +46,7 @@ export default function StagiaireDemandesPage() {
         return
       }
 
+      // Récupère le profil utilisateur
       const { data: profile } = await supabase.from("users").select("*").eq("id", session.user.id).single()
       if (!profile) {
         router.push("/auth/login")
@@ -49,11 +55,11 @@ export default function StagiaireDemandesPage() {
 
       setUser(profile)
 
-      // Récupérer les informations du stagiaire
+      // Récupère les infos du stagiaire lié à l'utilisateur
       const { data: stagiaire } = await supabase.from("stagiaires").select("*").eq("user_id", profile.id).single()
-
       setStagiaireInfo(stagiaire)
 
+      // Si le stagiaire existe, charge ses demandes
       if (stagiaire) {
         await loadDemandes(stagiaire.id)
       }
@@ -64,6 +70,7 @@ export default function StagiaireDemandesPage() {
     checkAuth()
   }, [router, supabase])
 
+  // Fonction pour charger les demandes du stagiaire depuis Supabase
   const loadDemandes = async (stagiaireId: string) => {
     try {
       const { data, error } = await supabase
@@ -84,6 +91,7 @@ export default function StagiaireDemandesPage() {
     }
   }
 
+  // Fonction utilitaire pour la couleur du badge selon le statut
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "en_attente":
@@ -101,6 +109,7 @@ export default function StagiaireDemandesPage() {
     }
   }
 
+  // Fonction utilitaire pour l'icône selon le statut
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "en_attente":
@@ -118,6 +127,7 @@ export default function StagiaireDemandesPage() {
     }
   }
 
+  // Fonction utilitaire pour la couleur du badge selon le type de demande
   const getTypeBadgeColor = (type: string) => {
     switch (type) {
       case "stage_academique":
@@ -135,10 +145,12 @@ export default function StagiaireDemandesPage() {
     }
   }
 
+  // Fonction utilitaire pour formater la date en français
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR")
   }
 
+  // Affichage d'un loader pendant le chargement
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -147,6 +159,7 @@ export default function StagiaireDemandesPage() {
     )
   }
 
+  // Si le profil stagiaire est incomplet, invite à le compléter
   if (!stagiaireInfo) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -167,11 +180,13 @@ export default function StagiaireDemandesPage() {
     )
   }
 
+  // Affichage principal de la page
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Titre et sous-titre */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Mes demandes</h1>
           <p className="text-gray-600">Gérer et suivre toutes vos demandes</p>
@@ -179,6 +194,7 @@ export default function StagiaireDemandesPage() {
 
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          {/* Nombre de demandes en attente */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -192,6 +208,7 @@ export default function StagiaireDemandesPage() {
               </div>
             </CardContent>
           </Card>
+          {/* Nombre de demandes approuvées */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -205,6 +222,7 @@ export default function StagiaireDemandesPage() {
               </div>
             </CardContent>
           </Card>
+          {/* Nombre de demandes rejetées */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -218,6 +236,7 @@ export default function StagiaireDemandesPage() {
               </div>
             </CardContent>
           </Card>
+          {/* Nombre total de demandes */}
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -231,7 +250,7 @@ export default function StagiaireDemandesPage() {
           </Card>
         </div>
 
-        {/* Actions */}
+        {/* Bouton pour créer une nouvelle demande */}
         <div className="mb-6">
           <Button onClick={() => router.push("/stagiaire/demandes/nouvelle")}>
             <Plus className="mr-2 h-4 w-4" />
@@ -239,7 +258,7 @@ export default function StagiaireDemandesPage() {
           </Button>
         </div>
 
-        {/* Liste des demandes */}
+        {/* Tableau des demandes */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -248,6 +267,7 @@ export default function StagiaireDemandesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Si aucune demande, affiche un message d'information */}
             {demandes.length === 0 ? (
               <div className="text-center py-8">
                 <FileText className="mx-auto h-12 w-12 text-gray-400" />
@@ -261,6 +281,7 @@ export default function StagiaireDemandesPage() {
                 </div>
               </div>
             ) : (
+              // Sinon, affiche le tableau des demandes
               <Table>
                 <TableHeader>
                   <TableRow>
