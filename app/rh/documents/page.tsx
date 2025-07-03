@@ -42,24 +42,40 @@ export default function RHDocumentsPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("/api/auth/user", {
-          method: "GET",
-          credentials: "include"
-        })
+        console.log("🔍 Vérification de l'authentification RH...")
 
-        if (!response.ok) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+
+        if (!session) {
+          console.log("❌ Pas de session")
           router.push("/auth/login")
           return
         }
 
-        const { user } = await response.json()
+        console.log("✅ Session trouvée:", session.user.email)
 
-        if (!user || user.role !== "rh") {
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
+
+        if (profileError || !profile) {
+          console.error("❌ Erreur récupération profil:", profileError)
           router.push("/auth/login")
           return
         }
 
-        setUser(user)
+        if (profile.role !== "rh" || !profile.is_active) {
+          console.log("❌ Profil non RH:", profile.role)
+          router.push("/auth/login")
+          return
+        }
+
+        console.log("✅ Profil RH confirmé")
+        setUser(profile)
         await loadDocuments()
         setLoading(false)
       } catch (error) {
@@ -69,7 +85,7 @@ export default function RHDocumentsPage() {
     }
 
     checkAuth()
-  }, [router])
+  }, [router, supabase])
 
   const loadDocuments = async () => {
     try {
