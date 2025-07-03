@@ -1,48 +1,60 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { BackButton } from "@/components/ui/back-button"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Header } from "@/components/layout/header"
+import { Users, Plus, Edit, Trash2, UserCheck, UserX, Search, Filter, MoreHorizontal, Eye } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Save, User } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { BackButton } from "@/components/ui/back-button"
 
-interface UserFormData {
+interface User {
+  id: string
   email: string
   name: string
-  role: "admin" | "rh" | "tuteur" | "stagiaire"
-  phone: string
-  department: string
-  position: string
-  address: string
+  role: string
+  phone?: string
+  department?: string
+  position?: string
   is_active: boolean
-  password: string
+  created_at: string
+  last_login?: string
 }
 
-export default function NewUserPage() {
+export default function AdminUsersPage() {
   const [user, setUser] = useState<any>(null)
+  const [users, setUsers] = useState<User[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [formData, setFormData] = useState<UserFormData>({
-    email: "",
-    name: "",
-    role: "stagiaire",
-    phone: "",
-    department: "",
-    position: "",
-    address: "",
-    is_active: true,
-    password: ""
-  })
-  const [errors, setErrors] = useState<Partial<UserFormData>>({})
-  
+  const [searchTerm, setSearchTerm] = useState("")
+  const [roleFilter, setRoleFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
@@ -50,7 +62,7 @@ export default function NewUserPage() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("🔍 Vérification de l'authentification admin...")
+        console.log("🔍 Vérification de l'authentification admin users...")
 
         const {
           data: { session },
@@ -70,36 +82,21 @@ export default function NewUserPage() {
           .eq("id", session.user.id)
           .single()
 
-        if (profileError || !profile) {
+        if (profileError) {
           console.error("❌ Erreur récupération profil:", profileError)
           router.push("/auth/login")
           return
         }
 
-        if (profile.role !== "admin") {
-          console.log("❌ Profil non admin:", profile.role, "is_active:", profile.is_active)
-          toast({
-            title: "Accès refusé",
-            description: `Accès administrateur requis. Votre rôle: ${profile.role}`,
-            variant: "destructive"
-          })
-          router.push("/")
-          return
-        }
-
-        if (!profile.is_active) {
-          console.log("❌ Compte inactif:", profile.role, "is_active:", profile.is_active)
-          toast({
-            title: "Accès refusé",
-            description: "Votre compte administrateur est inactif",
-            variant: "destructive"
-          })
+        if (!profile || profile.role !== "admin") {
+          console.log("❌ Profil non admin:", profile?.role)
           router.push("/")
           return
         }
 
         console.log("✅ Profil admin confirmé")
         setUser(profile)
+        await loadUsers()
         setLoading(false)
       } catch (error) {
         console.error("💥 Erreur auth check:", error)
@@ -108,127 +105,134 @@ export default function NewUserPage() {
     }
 
     checkAuth()
-  }, [router, toast, supabase])
+  }, [router, supabase])
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<UserFormData> = {}
+  const loadUsers = async () => {
+    try {
+      console.log("📡 Chargement des utilisateurs...")
 
-    if (!formData.email) {
-      newErrors.email = "L'email est requis"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Format d'email invalide"
-    }
+      const response = await fetch("/api/admin/users")
+      const data = await response.json()
 
-    if (!formData.name) {
-      newErrors.name = "Le nom est requis"
-    }
+      console.log("📊 Réponse API:", { success: data.success, count: data.data?.length })
 
-    if (!formData.password) {
-      newErrors.password = "Le mot de passe est requis"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Le mot de passe doit contenir au moins 6 caractères"
-    }
-
-    if (!formData.role) {
-      newErrors.role = "Le rôle est requis"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
+      if (data.success) {
+        console.log("✅ Utilisateurs chargés:", data.data.length)
+        setUsers(data.data)
+        setFilteredUsers(data.data)
+      } else {
+        console.error("❌ Erreur API:", data.error)
+        throw new Error(data.error)
+      }
+    } catch (error) {
+      console.error("💥 Erreur lors du chargement des utilisateurs:", error)
       toast({
         title: "Erreur",
-        description: "Veuillez corriger les erreurs dans le formulaire",
-        variant: "destructive"
+        description: "Impossible de charger les utilisateurs",
+        variant: "destructive",
       })
-      return
+    }
+  }
+
+  // Filtrage des utilisateurs
+  useEffect(() => {
+    let filtered = users
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
     }
 
-    setSaving(true)
+    if (roleFilter !== "all") {
+      filtered = filtered.filter((user) => user.role === roleFilter)
+    }
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((user) => (statusFilter === "active" ? user.is_active : !user.is_active))
+    }
+
+    setFilteredUsers(filtered)
+  }, [users, searchTerm, roleFilter, statusFilter])
+
+  const handleToggleStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          is_active: !currentStatus,
+        }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Succès",
+          description: `Utilisateur ${!currentStatus ? "activé" : "désactivé"} avec succès`,
+        })
+        await loadUsers()
+      } else {
+        throw new Error("Erreur lors de la mise à jour")
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le statut",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return
 
     try {
-      console.log("🚀 Envoi des données utilisateur:", { ...formData, password: "[HIDDEN]" })
-
-      // Créer l'utilisateur avec l'API
-      const response = await fetch("/api/admin/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(formData)
+      const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
+        method: "DELETE",
       })
 
-      let result
-      try {
-        result = await response.json()
-      } catch (parseError) {
-        console.error("❌ Erreur parsing JSON:", parseError)
-        throw new Error("Réponse serveur invalide")
-      }
-      
-      console.log("📥 Réponse API:", { status: response.status, result })
-
-      if (!response.ok) {
-        let errorMessage = result?.error || "Erreur lors de la création"
-
-        // Messages d'erreur plus spécifiques
-        if (response.status === 401) {
-          errorMessage = "Non authentifié - veuillez vous reconnecter"
-        } else if (response.status === 403) {
-          errorMessage = "Accès refusé - permissions administrateur requises"
-        } else if (response.status === 500) {
-          errorMessage = "Erreur serveur - veuillez réessayer"
-        }
-
-        console.error("❌ Erreur API détaillée:", {
-          status: response.status,
-          error: result?.error,
-          details: result?.details
+      if (response.ok) {
+        toast({
+          title: "Succès",
+          description: "Utilisateur supprimé avec succès",
         })
-
-        throw new Error(errorMessage)
+        await loadUsers()
+      } else {
+        throw new Error("Erreur lors de la suppression")
       }
-
-      if (!result.success) {
-        throw new Error(result.error || "Échec de la création")
-      }
-
-      toast({
-        title: "Succès",
-        description: "Utilisateur créé avec succès"
-      })
-
-      router.push("/admin/users")
-    } catch (error: any) {
-      console.error("❌ Erreur création utilisateur:", error)
+    } catch (error) {
       toast({
         title: "Erreur",
-        description: error.message || "Impossible de créer l'utilisateur",
-        variant: "destructive"
+        description: "Impossible de supprimer l'utilisateur",
+        variant: "destructive",
       })
     } finally {
-      setSaving(false)
+      setDeleteDialogOpen(false)
+      setUserToDelete(null)
     }
   }
 
-  const handleInputChange = (field: keyof UserFormData, value: string | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-    
-    // Effacer l'erreur du champ modifié
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }))
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case "admin":
+        return "bg-red-100 text-red-800"
+      case "rh":
+        return "bg-blue-100 text-blue-800"
+      case "tuteur":
+        return "bg-green-100 text-green-800"
+      case "stagiaire":
+        return "bg-yellow-100 text-yellow-800"
+      default:
+        return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("fr-FR")
   }
 
   if (loading) {
@@ -240,175 +244,238 @@ export default function NewUserPage() {
   }
 
   return (
-    <div className="container mx-auto py-10 max-w-4xl">
-      <div className="mb-8">
-        <div className="flex items-center gap-4">
-          <BackButton href="/admin/users" />
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Nouvel utilisateur</h1>
-            <p className="text-gray-600">Créer un nouveau compte utilisateur</p>
+    <div className="min-h-screen bg-gray-50">
+      <Header user={user} />
+
+      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <div className="flex items-center gap-4 mb-4">
+            <BackButton href="/admin" />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Gestion des utilisateurs</h1>
+              <p className="text-gray-600">Gérer tous les comptes utilisateurs du système</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Informations principales */}
+        {/* Statistiques rapides */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                Informations principales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  placeholder="utilisateur@example.com"
-                  className={errors.email ? "border-red-500" : ""}
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500 mt-1">{errors.email}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="name">Nom complet *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  placeholder="Jean Dupont"
-                  className={errors.name ? "border-red-500" : ""}
-                />
-                {errors.name && (
-                  <p className="text-sm text-red-500 mt-1">{errors.name}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="password">Mot de passe *</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange("password", e.target.value)}
-                  placeholder="Minimum 6 caractères"
-                  className={errors.password ? "border-red-500" : ""}
-                />
-                {errors.password && (
-                  <p className="text-sm text-red-500 mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="role">Rôle *</Label>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange("role", value)}>
-                  <SelectTrigger className={errors.role ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Sélectionner un rôle" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="admin">Administrateur</SelectItem>
-                    <SelectItem value="rh">Ressources Humaines</SelectItem>
-                    <SelectItem value="tuteur">Tuteur</SelectItem>
-                    <SelectItem value="stagiaire">Stagiaire</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.role && (
-                  <p className="text-sm text-red-500 mt-1">{errors.role}</p>
-                )}
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => handleInputChange("is_active", checked)}
-                />
-                <Label htmlFor="is_active">Compte actif</Label>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-blue-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total</p>
+                  <p className="text-2xl font-bold text-gray-900">{users.length}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Informations complémentaires */}
           <Card>
-            <CardHeader>
-              <CardTitle>Informations complémentaires</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="phone">Téléphone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="+33 1 23 45 67 89"
-                />
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <UserCheck className="h-8 w-8 text-green-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Actifs</p>
+                  <p className="text-2xl font-bold text-gray-900">{users.filter((u) => u.is_active).length}</p>
+                </div>
               </div>
-
-              <div>
-                <Label htmlFor="department">Département</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => handleInputChange("department", e.target.value)}
-                  placeholder="Informatique, RH, Marketing..."
-                />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <UserX className="h-8 w-8 text-red-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Inactifs</p>
+                  <p className="text-2xl font-bold text-gray-900">{users.filter((u) => !u.is_active).length}</p>
+                </div>
               </div>
-
-              <div>
-                <Label htmlFor="position">Poste</Label>
-                <Input
-                  id="position"
-                  value={formData.position}
-                  onChange={(e) => handleInputChange("position", e.target.value)}
-                  placeholder="Développeur, Manager, Stagiaire..."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="address">Adresse</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  placeholder="Adresse complète"
-                  rows={3}
-                />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Users className="h-8 w-8 text-yellow-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Stagiaires</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {users.filter((u) => u.role === "stagiaire").length}
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Boutons d'action */}
-        <div className="mt-8 flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push("/admin/users")}
-          >
-            Annuler
+        {/* Filtres et actions */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-col sm:flex-row gap-4 flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Rechercher par nom ou email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-full sm:w-80"
+              />
+            </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Rôle" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les rôles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="rh">RH</SelectItem>
+                <SelectItem value="tuteur">Tuteur</SelectItem>
+                <SelectItem value="stagiaire">Stagiaire</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-40">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous</SelectItem>
+                <SelectItem value="active">Actifs</SelectItem>
+                <SelectItem value="inactive">Inactifs</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={() => router.push("/admin/users/new")}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouvel utilisateur
           </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Création...
-              </>
+        </div>
+
+        {/* Liste des utilisateurs */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Utilisateurs ({filteredUsers.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredUsers.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun utilisateur</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {searchTerm || roleFilter !== "all" || statusFilter !== "all"
+                    ? "Aucun utilisateur ne correspond aux critères de recherche."
+                    : "Commencez par créer votre premier utilisateur."}
+                </p>
+                {!searchTerm && roleFilter === "all" && statusFilter === "all" && (
+                  <div className="mt-6">
+                    <Button onClick={() => router.push("/admin/users/new")}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nouvel utilisateur
+                    </Button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Créer l'utilisateur
-              </>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Rôle</TableHead>
+                    <TableHead>Département</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Créé le</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
+                      </TableCell>
+                      <TableCell>{user.department || "-"}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.is_active ? "default" : "secondary"}>
+                          {user.is_active ? "Actif" : "Inactif"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}`)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Voir détails
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => router.push(`/admin/users/${user.id}/edit`)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Modifier
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleToggleStatus(user.id, user.is_active)}>
+                              {user.is_active ? (
+                                <>
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Désactiver
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Activer
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => {
+                                setUserToDelete(user)
+                                setDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Supprimer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
-          </Button>
-        </div>
-      </form>
+          </CardContent>
+        </Card>
+      </main>
+
+      {/* Dialog de confirmation de suppression */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer l'utilisateur "{userToDelete?.name}" ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteUser} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
