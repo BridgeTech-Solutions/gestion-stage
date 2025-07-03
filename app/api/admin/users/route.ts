@@ -6,17 +6,19 @@ export async function POST(request: NextRequest) {
     console.log("🚀 API Admin Users POST - Début")
     const supabase = await createClient()
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Utiliser getSession() pour être cohérent avec la page
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-    if (authError || !user) {
-      console.log("❌ Erreur auth:", authError?.message)
+    if (sessionError || !session?.user) {
+      console.log("❌ Erreur session:", sessionError?.message)
       return NextResponse.json(
-        { error: 'Non autorisé', success: false },
+        { error: 'Non autorisé - session invalide', success: false },
         { status: 401 }
       )
     }
 
-    console.log("✅ Utilisateur authentifié:", user.email)
+    const user = session.user
+    console.log("✅ Utilisateur authentifié via session:", user.email)
 
     // Vérifier les permissions admin
     const { data: userProfile, error: profileError } = await supabase
@@ -82,13 +84,17 @@ export async function POST(request: NextRequest) {
     // Validation du rôle
     const validRoles = ['admin', 'rh', 'tuteur', 'stagiaire']
     if (!validRoles.includes(userData.role)) {
+      console.log("❌ Rôle invalide:", userData.role)
       return NextResponse.json({ 
         success: false,
         error: "Rôle invalide" 
       }, { status: 400 })
     }
 
+    console.log("✅ Toutes les validations passées, création de l'utilisateur...")
+
     // Créer l'utilisateur dans Supabase Auth
+    console.log("🔧 Tentative de création utilisateur auth pour:", userData.email)
     const { data: authUser, error: authUserError } = await supabase.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
@@ -100,11 +106,30 @@ export async function POST(request: NextRequest) {
     })
 
     if (authUserError) {
-      console.error("❌ Erreur création auth:", authUserError)
+      console.error("❌ Erreur création auth complète:", {
+        message: authUserError.message,
+        status: authUserError.status,
+        code: authUserError.code,
+        details: authUserError
+      })
+      
+      // Gérer les erreurs spécifiques
+      let errorMessage = authUserError.message || "Erreur lors de la création du compte"
+      let statusCode = 400
+      
+      if (authUserError.message?.includes("not allowed")) {
+        errorMessage = "Création d'utilisateur non autorisée - vérifiez les permissions administrateur"
+        statusCode = 403
+      } else if (authUserError.message?.includes("already exists")) {
+        errorMessage = "Un utilisateur avec cet email existe déjà"
+        statusCode = 409
+      }
+      
       return NextResponse.json({ 
         success: false,
-        error: authUserError.message || "Erreur lors de la création du compte" 
-      }, { status: 400 })
+        error: errorMessage,
+        debug_error: authUserError.message
+      }, { status: statusCode })
     }
 
     if (!authUser.user) {
