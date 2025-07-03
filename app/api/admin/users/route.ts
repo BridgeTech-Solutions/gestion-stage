@@ -1,15 +1,37 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("🚀 POST /api/admin/users - Début de la requête")
+    
     const supabase = await createClient()
+    
+    // Créer un client admin avec la clé de service
+    const supabaseAdmin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
 
     // Vérifier la session d'abord
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
+    console.log("📊 Session check:")
+    console.log("- Session error:", sessionError?.message || "none")
+    console.log("- Session exists:", !!session)
+    console.log("- User exists:", !!session?.user)
+    console.log("- User ID:", session?.user?.id)
+    console.log("- User email:", session?.user?.email)
+
     if (sessionError || !session?.user) {
-      console.log("❌ Pas de session utilisateur:", sessionError?.message)
+      console.log("❌ ÉCHEC: Pas de session utilisateur")
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -19,22 +41,39 @@ export async function POST(request: NextRequest) {
     console.log("✅ Session trouvée pour:", session.user.email)
 
     // Vérifier les permissions admin
+    console.log("🔍 Vérification du profil pour user ID:", session.user.id)
+    
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, is_active, email, name')
       .eq('id', session.user.id)
       .single()
 
+    console.log("📊 Profile check:")
+    console.log("- Profile error:", profileError?.message || "none") 
+    console.log("- Profile found:", !!userProfile)
+    console.log("- User role:", userProfile?.role)
+    console.log("- User active:", userProfile?.is_active)
+    console.log("- Profile email:", userProfile?.email)
+
     if (profileError) {
-      console.error("❌ Erreur récupération profil:", profileError)
+      console.error("❌ ÉCHEC: Erreur récupération profil:", profileError.message)
       return NextResponse.json(
         { error: 'Erreur de vérification des permissions' },
         { status: 500 }
       )
     }
 
-    if (!userProfile || userProfile.role !== 'admin') {
-      console.log("❌ Utilisateur non autorisé:", userProfile?.role)
+    if (!userProfile) {
+      console.log("❌ ÉCHEC: Aucun profil trouvé")
+      return NextResponse.json(
+        { error: 'Profil utilisateur non trouvé' },
+        { status: 404 }
+      )
+    }
+
+    if (userProfile.role !== 'admin') {
+      console.log("❌ ÉCHEC: Utilisateur non admin, rôle actuel:", userProfile.role)
       return NextResponse.json(
         { error: 'Permissions insuffisantes' },
         { status: 403 }
@@ -80,8 +119,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Créer l'utilisateur dans Supabase Auth
-    const { data: authUser, error: authUserError } = await supabase.auth.admin.createUser({
+    // Créer l'utilisateur dans Supabase Auth avec le client admin
+    const { data: authUser, error: authUserError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
       password: userData.password,
       email_confirm: true,
@@ -109,8 +148,8 @@ export async function POST(request: NextRequest) {
 
     console.log("✅ Utilisateur auth créé:", authUser.user?.id)
 
-    // Créer le profil utilisateur
-    const { data: newUser, error: userError } = await supabase
+    // Créer le profil utilisateur avec le client admin
+    const { data: newUser, error: userError } = await supabaseAdmin
       .from("users")
       .insert({
         id: authUser.user!.id,
@@ -130,7 +169,7 @@ export async function POST(request: NextRequest) {
       console.error("❌ Erreur création profil:", userError)
       // Supprimer l'utilisateur auth si erreur profil
       try {
-        await supabase.auth.admin.deleteUser(authUser.user!.id)
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user!.id)
         console.log("✅ Utilisateur auth supprimé après erreur profil")
       } catch (deleteError) {
         console.error("❌ Erreur suppression utilisateur auth:", deleteError)
@@ -144,7 +183,7 @@ export async function POST(request: NextRequest) {
     // Si l'utilisateur est un stagiaire, créer également l'entrée dans la table stagiaires
     if (userData.role === "stagiaire") {
       // Trouver un tuteur disponible
-      const { data: tuteurs, error: tuteursError } = await supabase
+      const { data: tuteurs, error: tuteursError } = await supabaseAdmin
         .from("users")
         .select(`
           id, 
@@ -170,7 +209,7 @@ export async function POST(request: NextRequest) {
         console.log("✅ Tuteur assigné:", tuteurAvecMoinsDeStages.name)
       }
 
-      const { error: stagiaireError } = await supabase
+      const { error: stagiaireError } = await supabaseAdmin
         .from("stagiaires")
         .insert({
           user_id: authUser.user!.id,
