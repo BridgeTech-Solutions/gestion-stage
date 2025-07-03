@@ -3,27 +3,50 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("🚀 API Admin Users POST - Début")
     const supabase = await createClient()
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.log("❌ Erreur auth:", authError?.message)
       return NextResponse.json(
-        { error: 'Non autorisé' },
+        { error: 'Non autorisé', success: false },
         { status: 401 }
       )
     }
 
+    console.log("✅ Utilisateur authentifié:", user.email)
+
     // Vérifier les permissions admin
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, is_active, name')
       .eq('id', user.id)
       .single()
 
-    if (!userProfile || userProfile.role !== 'admin') {
+    if (profileError) {
+      console.error("❌ Erreur récupération profil:", profileError)
       return NextResponse.json(
-        { error: 'Permissions insuffisantes' },
+        { error: 'Erreur récupération profil', success: false },
+        { status: 500 }
+      )
+    }
+
+    console.log("📋 Profil utilisateur:", userProfile)
+
+    if (!userProfile || userProfile.role !== 'admin') {
+      console.log("❌ Permissions insuffisantes. Rôle:", userProfile?.role)
+      return NextResponse.json(
+        { error: 'Permissions insuffisantes - rôle admin requis', success: false },
+        { status: 403 }
+      )
+    }
+
+    if (!userProfile.is_active) {
+      console.log("❌ Compte inactif")
+      return NextResponse.json(
+        { error: 'Compte administrateur inactif', success: false },
         { status: 403 }
       )
     }
