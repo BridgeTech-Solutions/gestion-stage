@@ -101,7 +101,7 @@ export default function AdminUsersPage() {
     try {
       console.log("📡 Chargement des utilisateurs...")
 
-      const response = await fetch("/api/admin/users")
+      const response = await fetch("/api/admin/users", { credentials: "include" })
       const data = await response.json()
 
       console.log("📊 Réponse API:", { success: data.success, count: data.data?.length })
@@ -157,6 +157,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           is_active: !currentStatus,
         }),
+        credentials: "include",
       })
 
       if (response.ok) {
@@ -183,6 +184,7 @@ export default function AdminUsersPage() {
     try {
       const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
         method: "DELETE",
+        credentials: "include",
       })
 
       if (response.ok) {

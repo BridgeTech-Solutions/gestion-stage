@@ -11,6 +11,19 @@ import { BackButton } from "@/components/ui/back-button"
 import { toast } from "@/hooks/use-toast"
 import { FileText, User, MessageSquare, Download } from "lucide-react"
 
+interface Document {
+  id: string
+  nom: string
+  type: string
+  taille: number
+  url?: string
+  chemin?: string
+  user_id: string
+  demande_id?: string
+  is_public?: boolean
+  created_at: string
+}
+
 interface Demande {
   id: string
   type: string
@@ -43,6 +56,7 @@ export default function DemandeDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [demande, setDemande] = useState<Demande | null>(null)
+  const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
   const [statut, setStatut] = useState("")
@@ -50,7 +64,21 @@ export default function DemandeDetailPage() {
 
   useEffect(() => {
     loadDemande()
+    loadDocuments()
   }, [params.id])
+  const loadDocuments = async () => {
+    try {
+      const response = await fetch(`/api/documents?demande_id=${params.id}`, { credentials: "include" })
+      const data = await response.json()
+      if (response.ok && data.data) {
+        setDocuments(data.data)
+      } else {
+        setDocuments([])
+      }
+    } catch (error) {
+      setDocuments([])
+    }
+  }
 
   const loadDemande = async () => {
     try {
@@ -293,30 +321,34 @@ export default function DemandeDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Documents requis */}
-      {demande.documents_requis && demande.documents_requis.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
-              Documents fournis
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Documents liés à la demande */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Documents liés à la demande
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {documents.length === 0 ? (
+            <div className="text-gray-500">Aucun document trouvé pour cette demande.</div>
+          ) : (
             <div className="grid gap-2">
-              {demande.documents_requis.map((doc, index) => (
-                <div key={index} className="flex items-center justify-between p-2 border rounded">
-                  <span>{doc}</span>
-                  <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger
-                  </Button>
+              {documents.map((doc) => (
+                <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
+                  <span>{doc.nom}</span>
+                  <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm">
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </a>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Traitement de la demande */}
       <Card>

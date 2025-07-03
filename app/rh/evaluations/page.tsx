@@ -52,7 +52,7 @@ export default function RHEvaluationsPage() {
 
   const fetchUser = async () => {
     try {
-      const response = await fetch("/api/auth/user")
+      const response = await fetch("/api/auth/user", { credentials: "include" })
       if (response.ok) {
         const userData = await response.json()
         setUser(userData)
@@ -64,7 +64,7 @@ export default function RHEvaluationsPage() {
 
   const fetchEvaluations = async () => {
     try {
-      const response = await fetch("/api/evaluations")
+      const response = await fetch("/api/evaluations", { credentials: "include" })
       
       if (!response.ok) {
         throw new Error("Erreur lors de la récupération des évaluations")

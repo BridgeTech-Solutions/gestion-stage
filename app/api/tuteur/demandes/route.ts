@@ -12,7 +12,7 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non autorisé" }, { status: 401 })
     }
 
     // Vérifier le rôle tuteur
@@ -23,7 +23,7 @@ export async function GET() {
       .single()
 
     if (!profile || profile.role !== "tuteur") {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès refusé" }, { status: 403 })
     }
 
     // Récupérer les demandes assignées à ce tuteur
@@ -57,23 +57,12 @@ export async function GET() {
 
     if (demandesError) {
       console.error("❌ Erreur récupération demandes tuteur:", demandesError)
-      return NextResponse.json({
-        success: true,
-        data: [],
-        message: "Aucune demande trouvée"
-      })
+      return NextResponse.json({ success: false, error: demandesError.message || "Erreur lors de la récupération des demandes" }, { status: 500 })
     }
 
-    return NextResponse.json({
-      success: true,
-      data: demandes || [],
-    })
+    return NextResponse.json({ success: true, data: demandes || [] })
   } catch (error) {
     console.error("💥 Erreur API demandes tuteur:", error)
-    return NextResponse.json({
-      success: true,
-      data: [],
-      message: "Erreur serveur interne"
-    })
+    return NextResponse.json({ success: false, error: "Erreur serveur interne" }, { status: 500 })
   }
 }

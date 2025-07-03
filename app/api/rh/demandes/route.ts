@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
     }
 
     // Récupérer toutes les demandes avec relations
@@ -33,11 +33,13 @@ export async function GET(request: NextRequest) {
       `)
       .order("date_demande", { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la récupération des demandes" }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true, data: demandes })
   } catch (error) {
     console.error("Erreur lors de la récupération des demandes:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 }

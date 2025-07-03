@@ -10,13 +10,13 @@ export async function GET(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
     }
 
     // Récupérer tous les stagiaires avec leurs informations utilisateur
@@ -42,12 +42,14 @@ export async function GET(request: NextRequest) {
       .eq('users.role', 'stagiaire')
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la récupération des stagiaires" }, { status: 500 })
+    }
 
     return NextResponse.json({ success: true, data: stagiaires })
   } catch (error) {
     console.error("Erreur lors de la récupération des stagiaires:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 }
 
@@ -60,13 +62,13 @@ export async function POST(request: NextRequest) {
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
     }
 
     const body = await request.json()
@@ -74,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Validation
     if (!user_id) {
-      return NextResponse.json({ error: "ID utilisateur requis" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "ID utilisateur requis" }, { status: 400 })
     }
 
     // Créer le stagiaire
@@ -95,7 +97,9 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la création du stagiaire" }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
@@ -104,6 +108,6 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Erreur lors de la création du stagiaire:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 }

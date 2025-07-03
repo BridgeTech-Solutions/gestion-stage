@@ -92,13 +92,10 @@ export async function POST(
         data: { demande_id: id, raison: commentaire || raison }
       })
 
-    return NextResponse.json(data[0])
+    return NextResponse.json({ success: true, data: data[0], message: "Demande rejetée avec succès" })
 
   } catch (error) {
     console.error('Erreur reject demande:', error)
-    return NextResponse.json(
-      { error: 'Erreur serveur' },
-      { status: 500 }
-    )
+    return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 })
   }
 }

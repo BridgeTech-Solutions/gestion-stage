@@ -64,17 +64,13 @@ export default function RHDocumentsPage() {
 
   const loadDocuments = async () => {
     try {
-      const { data, error } = await supabase
-        .from("documents")
-        .select(`
-          *,
-          users(name, email)
-        `)
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      setDocuments(data || [])
-      setFilteredDocuments(data || [])
+      const response = await fetch("/api/rh/documents", { credentials: "include" })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Erreur lors du chargement des documents")
+      }
+      setDocuments(result.data || [])
+      setFilteredDocuments(result.data || [])
     } catch (error) {
       console.error("Erreur lors du chargement des documents:", error)
       toast({

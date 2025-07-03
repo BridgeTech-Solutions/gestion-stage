@@ -10,19 +10,19 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
     }
 
     // Vérifier que l'ID est un UUID valide
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     if (!uuidRegex.test(params.id)) {
-      return NextResponse.json({ error: "ID demande invalide" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "ID demande invalide" }, { status: 400 })
     }
 
     // Récupérer la demande avec les informations du stagiaire et documents
@@ -52,15 +52,15 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (error) {
       console.error("Erreur Supabase:", error)
       if (error.code === "PGRST116") {
-        return NextResponse.json({ error: "Demande non trouvée" }, { status: 404 })
+        return NextResponse.json({ success: false, error: "Demande non trouvée" }, { status: 404 })
       }
-      throw error
+      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la récupération de la demande" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, data: demande })
   } catch (error) {
     console.error("Erreur lors de la récupération de la demande:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 }
 
@@ -73,13 +73,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       data: { session },
     } = await supabase.auth.getSession()
     if (!session) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json({ success: false, error: "Non authentifié" }, { status: 401 })
     }
 
     const { data: currentUser } = await supabase.from("users").select("role").eq("id", session.user.id).single()
 
     if (!currentUser || currentUser.role !== "rh") {
-      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 })
+      return NextResponse.json({ success: false, error: "Accès non autorisé" }, { status: 403 })
     }
 
     // Vérifier que l'ID est un UUID valide
@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Validation
     if (!statut || !["approuvee", "rejetee"].includes(statut)) {
-      return NextResponse.json({ error: "Statut invalide" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Statut invalide" }, { status: 400 })
     }
 
     // Mettre à jour la demande
@@ -119,7 +119,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     if (error) {
       console.error("Erreur mise à jour:", error)
-      throw error
+      return NextResponse.json({ success: false, error: error.message || "Erreur lors de la mise à jour de la demande" }, { status: 500 })
     }
 
     // Créer une notification pour le stagiaire
@@ -140,6 +140,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     })
   } catch (error) {
     console.error("Erreur lors du traitement de la demande:", error)
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Erreur serveur" }, { status: 500 })
   }
 }
