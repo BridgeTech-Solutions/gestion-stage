@@ -76,17 +76,7 @@ export default function AdminUsersPage() {
 
         console.log("✅ Session trouvée:", session.user.email)
 
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", session.user.id)
-          .single()
-
-        if (profileError) {
-          console.error("❌ Erreur récupération profil:", profileError)
-          router.push("/auth/login")
-          return
-        }
+        const { data: profile } = await supabase.from("users").select("*").eq("id", session.user.id).single()
 
         if (!profile || profile.role !== "admin") {
           console.log("❌ Profil non admin:", profile?.role)
@@ -111,31 +101,24 @@ export default function AdminUsersPage() {
     try {
       console.log("📡 Chargement des utilisateurs...")
 
-      const response = await fetch("/api/admin/users")
-      console.log("📡 Statut réponse:", response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("❌ Erreur HTTP:", response.status, errorText)
-        throw new Error(`Erreur ${response.status}: ${errorText}`)
-      }
-
+      const response = await fetch("/api/admin/users", { credentials: "include" })
       const data = await response.json()
-      console.log("📊 Réponse API complète:", data)
+
+      console.log("📊 Réponse API:", { success: data.success, count: data.data?.length })
 
       if (data.success) {
-        console.log("✅ Utilisateurs chargés:", data.data?.length || 0)
-        setUsers(data.data || [])
-        setFilteredUsers(data.data || [])
+        console.log("✅ Utilisateurs chargés:", data.data.length)
+        setUsers(data.data)
+        setFilteredUsers(data.data)
       } else {
         console.error("❌ Erreur API:", data.error)
-        throw new Error(data.error || "Erreur inconnue")
+        throw new Error(data.error)
       }
     } catch (error) {
       console.error("💥 Erreur lors du chargement des utilisateurs:", error)
       toast({
         title: "Erreur",
-        description: `Impossible de charger les utilisateurs: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
+        description: "Impossible de charger les utilisateurs",
         variant: "destructive",
       })
     }
@@ -174,6 +157,7 @@ export default function AdminUsersPage() {
         body: JSON.stringify({
           is_active: !currentStatus,
         }),
+        credentials: "include",
       })
 
       if (response.ok) {
@@ -200,6 +184,7 @@ export default function AdminUsersPage() {
     try {
       const response = await fetch(`/api/admin/users/${userToDelete.id}`, {
         method: "DELETE",
+        credentials: "include",
       })
 
       if (response.ok) {
@@ -245,19 +230,10 @@ export default function AdminUsersPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement de la page des utilisateurs...</p>
-        </div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
-
-  console.log("🎯 Rendu de la page users avec:", { 
-    userCount: users.length, 
-    filteredCount: filteredUsers.length,
-    currentUser: user?.email 
-  })
 
   return (
     <div className="min-h-screen bg-gray-50">
