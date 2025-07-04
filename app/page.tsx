@@ -71,12 +71,12 @@ export default function HomePage() {
             {/* Left Content */}
             <div className="text-left space-y-6">
               <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-black dark:text-white">
-                Bienvenue sur
+                Bienvenue Chez
                 <br />
                 Bridge Technologies Solutions
               </h1>
               <p className="text-base lg:text-lg leading-relaxed max-w-md text-black dark:text-white">
-                Explorez et soumettez vos demandes de stage en toute simplicité grâce à notre plateforme intuitive.
+               Soumettez et suivez vos demandes de stage en toute simplicité grâce à notre plateforme intuitive.
               </p>
             </div>
 
@@ -84,7 +84,7 @@ export default function HomePage() {
             <div className="relative flex justify-center lg:justify-end">
               <div className="relative">
                 <img
-                  src="/images/hero-laptop.png"
+                  src="https://cdn.pixabay.com/photo/2015/01/08/18/11/laptops-593296_1280.jpg"
                   alt="Professional workspace"
                   className="dark:hidden w-full max-w-sm lg:max-w-md rounded-lg shadow-lg"
                 />
