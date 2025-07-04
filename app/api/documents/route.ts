@@ -5,27 +5,20 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    if (authError || !session) {
-      console.error("❌ Auth error documents:", authError)
+    // Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    console.log("✅ Session documents:", session.user.email)
-
     const formData = await request.formData()
     const file = formData.get("file") as File
-    const nom = formData.get("nom") as string
     const type = formData.get("type") as string
-    const description = formData.get("description") as string
+    const demandeId = formData.get("demande_id") as string
     const isPublic = formData.get("is_public") === "true"
 
     if (!file) {
       return NextResponse.json({ error: "Aucun fichier fourni" }, { status: 400 })
-    }
-
-    if (!nom) {
-      return NextResponse.json({ error: "Le nom du document est requis" }, { status: 400 })
     }
 
     // Vérifier la taille du fichier (max 10MB)
@@ -33,34 +26,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Fichier trop volumineux (max 10MB)" }, { status: 400 })
     }
 
-    // Types de fichiers autorisés
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg',
-      'image/png',
-      'image/jpg',
-      'text/plain'
-    ]
-
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        error: "Type de fichier non autorisé. Formats acceptés : PDF, DOC, DOCX, JPG, PNG" 
-      }, { status: 400 })
-    }
-
-    // Générer un nom de fichier sécurisé
+    // Générer un nom unique pour le fichier
     const timestamp = Date.now()
     const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
     const fileName = `${timestamp}_${cleanFileName}`
-    const filePath = `documents/${session.user.id}/${fileName}`
-
-    console.log("📁 Upload fichier:", filePath)
+    const filePath = `${user.id}/${fileName}`
 
     try {
       // Upload vers Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("documents")
         .upload(filePath, file, {
           cacheControl: '3600',
@@ -69,66 +43,42 @@ export async function POST(request: NextRequest) {
 
       if (uploadError) {
         console.error("❌ Erreur upload storage:", uploadError)
-        return NextResponse.json({ 
-          error: "Erreur lors de l'upload: " + uploadError.message 
-        }, { status: 500 })
+        return NextResponse.json({ error: "Erreur lors de l'upload" }, { status: 500 })
       }
 
-      console.log("✅ Fichier uploadé:", uploadData.path)
-
-      // Obtenir l'URL publique
-      const { data: { publicUrl } } = supabase.storage
-        .from("documents")
-        .getPublicUrl(filePath)
-
-      // Sauvegarder en base
-      const { data: document, error: dbError } = await supabase
+      // Insérer les métadonnées en base
+      const { data: document, error: insertError } = await supabase
         .from("documents")
         .insert({
-          nom: nom,
-          type: type || "autre",
-          description: description || "",
-          chemin_fichier: filePath,
-          url: publicUrl,
-          taille: file.size,
+          nom: file.name,
+          type: type || "document",
           type_fichier: file.type,
-          user_id: session.user.id,
-          statut: "approuve",
+          taille: file.size,
+          chemin_fichier: filePath,
+          user_id: user.id,
+          demande_id: demandeId || null,
           is_public: isPublic,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: new Date().toISOString()
         })
         .select()
         .single()
 
-      if (dbError) {
-        console.error("❌ Erreur sauvegarde document:", dbError)
-        // Supprimer le fichier uploadé en cas d'erreur
+      if (insertError) {
+        // Nettoyer le fichier uploadé en cas d'erreur
         await supabase.storage.from("documents").remove([filePath])
-        return NextResponse.json({ 
-          error: "Erreur lors de la sauvegarde: " + dbError.message 
-        }, { status: 500 })
+        console.error("❌ Erreur insertion document:", insertError)
+        return NextResponse.json({ error: "Erreur lors de l'enregistrement" }, { status: 500 })
       }
 
-      console.log("✅ Document sauvegardé:", document.id)
-
-      return NextResponse.json({ 
-        success: true, 
-        data: { 
-          url: publicUrl,
-          id: document.id,
-          nom: document.nom,
-          type: document.type,
-          taille: document.taille
-        },
+      return NextResponse.json({
+        success: true,
+        data: document,
         message: "Document uploadé avec succès"
       })
 
     } catch (storageError) {
-      console.error("❌ Erreur storage:", storageError)
-      return NextResponse.json({ 
-        error: "Erreur lors de l'upload vers le stockage" 
-      }, { status: 500 })
+      console.error("💥 Erreur storage:", storageError)
+      return NextResponse.json({ error: "Erreur de stockage" }, { status: 500 })
     }
 
   } catch (error: any) {
@@ -221,8 +171,7 @@ export async function GET(request: NextRequest) {
     console.error("Erreur API documents:", error)
     return NextResponse.json({ 
       error: "Erreur serveur", 
-      success: false,
-      documents: []
+      success: false
     }, { status: 500 })
   }
 }
