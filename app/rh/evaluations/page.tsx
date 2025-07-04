@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 interface Evaluation {
   id: string
   stagiaire_id: string
-  tuteur_id: string
+  evaluateur_id: string
   note_globale: number
   commentaires: string
   competences_techniques: number
@@ -28,12 +28,20 @@ interface Evaluation {
   statut: string
   created_at: string
   stagiaire?: {
+    id: string
+    user_id: string
+    specialite: string
+    niveau: string
     users: {
       name: string
       email: string
     }
+    tuteur?: {
+      name: string
+      email: string
+    }
   }
-  tuteur?: {
+  evaluateur?: {
     name: string
     email: string
   }
@@ -125,8 +133,9 @@ export default function RHEvaluationsPage() {
     if (searchQuery) {
       filtered = filtered.filter(
         (evaluation) =>
-          evaluation.stagiaire?.users?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          evaluation.tuteur?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evaluation.stagiaire?.users?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evaluation.stagiaire?.tuteur?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evaluation.evaluateur?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
           evaluation.statut.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }
@@ -264,8 +273,8 @@ export default function RHEvaluationsPage() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{evaluation.tuteur?.name || "N/A"}</div>
-                        <div className="text-sm text-gray-500">{evaluation.tuteur?.email}</div>
+                        <div className="font-medium">{evaluation.stagiaire?.tuteur?.name || evaluation.evaluateur?.name || "N/A"}</div>
+                        <div className="text-sm text-gray-500">{evaluation.stagiaire?.tuteur?.email || evaluation.evaluateur?.email}</div>
                       </div>
                     </TableCell>
                     <TableCell>
