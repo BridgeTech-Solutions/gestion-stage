@@ -64,19 +64,57 @@ export default function DemandeDetailPage() {
 
   const handleDownloadDocument = async (doc: Document) => {
     try {
-      // Si le document a une URL (stocké dans le bucket)
-      if (doc.url || doc.chemin) {
-        const response = await fetch(`/api/documents/download-from-storage`, {
+      console.log("📥 Tentative de téléchargement:", doc.nom, doc.id)
+      
+      toast({
+        title: "Téléchargement en cours...",
+        description: `Préparation du fichier ${doc.nom}`,
+      })
+
+      // Essayer d'abord l'API de téléchargement direct
+      const response = await fetch(`/api/documents/${doc.id}/download`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/octet-stream'
+        }
+      })
+
+      if (response.ok) {
+        // Téléchargement réussi via l'API directe
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.style.display = 'none'
+        a.href = url
+        a.download = doc.nom
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        
+        toast({
+          title: "Succès",
+          description: `${doc.nom} téléchargé avec succès`,
+        })
+        return
+      }
+
+      // Si échec, essayer via le storage bucket
+      if (doc.url || doc.chemin_fichier) {
+        console.log("📦 Tentative via storage bucket...")
+        
+        const storageResponse = await fetch(`/api/documents/download-from-storage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
-            path: doc.url || doc.chemin,
+            path: doc.url || doc.chemin_fichier,
             filename: doc.nom 
           })
         })
         
-        if (response.ok) {
-          const blob = await response.blob()
+        if (storageResponse.ok) {
+          const blob = await storageResponse.blob()
           const url = window.URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.style.display = 'none'
@@ -86,22 +124,23 @@ export default function DemandeDetailPage() {
           a.click()
           window.URL.revokeObjectURL(url)
           document.body.removeChild(a)
-        } else {
+          
           toast({
-            title: "Erreur",
-            description: "Impossible de télécharger le document",
-            variant: "destructive",
+            title: "Succès",
+            description: `${doc.nom} téléchargé avec succès`,
           })
+          return
         }
-      } else {
-        // Fallback vers l'ancienne API
-        window.open(`/api/documents/${doc.id}/download`, '_blank')
       }
+
+      // Si tout échoue
+      throw new Error("Aucune méthode de téléchargement disponible")
+
     } catch (error) {
-      console.error('Erreur téléchargement:', error)
+      console.error('💥 Erreur téléchargement:', error)
       toast({
-        title: "Erreur",
-        description: "Erreur lors du téléchargement",
+        title: "Erreur de téléchargement",
+        description: `Impossible de télécharger ${doc.nom}. Le fichier pourrait être indisponible.`,
         variant: "destructive",
       })
     }
@@ -113,14 +152,36 @@ export default function DemandeDetailPage() {
   }, [params.id])
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`/api/demandes/${params.id}/documents`, { credentials: "include" })
+      console.log("🔄 Chargement des documents pour la demande:", params.id)
+      
+      const response = await fetch(`/api/demandes/${params.id}/documents`, { 
+        credentials: "include",
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log("📡 Réponse documents status:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("❌ Erreur réponse documents:", errorText)
+        setDocuments([])
+        return
+      }
+
       const data = await response.json()
-      if (response.ok && data.data) {
+      console.log("📋 Documents reçus:", data)
+      
+      if (data.success && data.data) {
         setDocuments(data.data)
+        console.log("✅ Documents chargés:", data.data.length)
       } else {
+        console.log("❌ Aucun document trouvé")
         setDocuments([])
       }
     } catch (error) {
+      console.error("💥 Erreur chargement documents:", error)
       setDocuments([])
     }
   }
@@ -371,25 +432,66 @@ export default function DemandeDetailPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
-            Documents liés à la demande
+            Documents liés à la demande ({documents.length})
           </CardTitle>
+          <CardDescription>
+            Tous les documents fournis par le stagiaire pour cette demande
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {documents.length === 0 ? (
-            <div className="text-gray-500">Aucun document trouvé pour cette demande.</div>
+            <div className="text-center py-8 text-gray-500">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium">Aucun document trouvé</p>
+              <p className="text-sm">Cette demande ne contient aucun document.</p>
+            </div>
           ) : (
-            <div className="grid gap-2">
+            <div className="space-y-3">
               {documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
-                  <span>{doc.nom}</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleDownloadDocument(doc)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Télécharger
-                  </Button>
+                <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="flex-shrink-0">
+                      <FileText className="h-8 w-8 text-blue-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{doc.nom}</h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                        {doc.type && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {doc.type}
+                          </span>
+                        )}
+                        {doc.taille && (
+                          <span>{Math.round(doc.taille / 1024)} KB</span>
+                        )}
+                        {doc.created_at && (
+                          <span>Ajouté le {new Date(doc.created_at).toLocaleDateString("fr-FR")}</span>
+                        )}
+                        {doc.users?.name && (
+                          <span>Par {doc.users.name}</span>
+                        )}
+                      </div>
+                      {doc.type_document_demande && (
+                        <div className="mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {doc.type_document_demande}
+                            {doc.obligatoire && " (Obligatoire)"}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleDownloadDocument(doc)}
+                      className="hover:bg-blue-50 hover:text-blue-600"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
