@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
@@ -39,6 +38,7 @@ export async function GET(request: NextRequest) {
     const stagiaireId = searchParams.get('stagiaire_id')
     const tuteurId = searchParams.get('tuteur_id')
 
+    // Récupérer l'évaluation avec tous les détails
     let query = supabase
       .from('evaluations')
       .select(`
@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
           user_id,
           specialite,
           niveau,
-          users!inner(name, email)
+          users!inner(name, email),
+          tuteur:users!stagiaires_tuteur_id_fkey(name, email)
         ),
         evaluateur:users!evaluations_evaluateur_id_fkey(name, email)
       `)
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         .select('id')
         .eq('user_id', session.user.id)
         .single()
-      
+
       if (stagiaireProfile) {
         console.log("🔍 Filtre stagiaire - évaluations pour:", stagiaireProfile.id)
         query = query.eq('stagiaire_id', stagiaireProfile.id)
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("✅ Évaluations récupérées:", data?.length || 0)
-    
+
     // Log des données pour debug
     if (data && data.length > 0) {
       console.log("📋 Première évaluation:", JSON.stringify(data[0], null, 2))
