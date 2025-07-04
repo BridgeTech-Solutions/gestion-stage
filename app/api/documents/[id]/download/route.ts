@@ -46,9 +46,52 @@ export async function GET(
     }
 
     // Télécharger le fichier depuis Supabase Storage
+    const filePath = document.url || document.chemin || document.chemin_fichier
+    
+    if (!filePath) {
+      return NextResponse.json({ error: "Chemin de fichier non trouvé" }, { status: 404 })
+    }
+
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("documents")
-      .download(document.chemin_fichier)
+      .download(filePath)
+
+    if (downloadError) {
+      console.error("Erreur téléchargement storage:", downloadError)
+      return NextResponse.json({ error: "Fichier non trouvé dans le storage" }, { status: 404 })
+    }
+
+    // Convertir en buffer pour la réponse
+    const buffer = await fileData.arrayBuffer()
+
+    // Déterminer le type MIME
+    const getContentType = (filename: string) => {
+      const ext = filename.toLowerCase().split('.').pop()
+      switch (ext) {
+        case 'pdf': return 'application/pdf'
+        case 'doc': return 'application/msword'
+        case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        case 'jpg':
+        case 'jpeg': return 'image/jpeg'
+        case 'png': return 'image/png'
+        case 'txt': return 'text/plain'
+        default: return 'application/octet-stream'
+      }
+    }
+
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': getContentType(document.nom),
+        'Content-Disposition': `attachment; filename="${document.nom}"`,
+        'Content-Length': buffer.byteLength.toString(),
+      },
+    })
+
+  } catch (error) {
+    console.error("Erreur API download:", error)
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
+  }
+}n_fichier)
 
     if (downloadError || !fileData) {
       return NextResponse.json({ error: "Erreur lors du téléchargement" }, { status: 500 })
