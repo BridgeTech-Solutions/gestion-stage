@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
         stagiaire:stagiaires!stagiaire_id(
           id,
           user_id,
-          specialite,
-          niveau,
+          entreprise,
+          poste,
           users!stagiaires_user_id_fkey(name, email)
         ),
         evaluateur:users!evaluateur_id(name, email)
