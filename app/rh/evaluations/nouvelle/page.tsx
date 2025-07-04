@@ -115,6 +115,8 @@ export default function NouvelleEvaluationPage() {
 
   const loadStagiaires = async () => {
     try {
+      console.log("🔄 Chargement des stagiaires...")
+      
       const response = await fetch('/api/rh/stagiaires', {
         method: 'GET',
         credentials: 'include',
@@ -123,25 +125,36 @@ export default function NouvelleEvaluationPage() {
         }
       })
 
+      console.log("📡 Réponse API stagiaires status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Erreur lors du chargement des stagiaires")
+        const errorText = await response.text()
+        console.error("❌ Erreur réponse stagiaires:", errorText)
+        throw new Error(`Erreur ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()
+      console.log("📋 Données reçues stagiaires:", data)
 
-      if (data.success && data.stagiaires) {
+      if (data.success && (data.stagiaires || data.data)) {
+        // Utiliser data.stagiaires en priorité, sinon data.data
+        const stagiairesList = data.stagiaires || data.data || []
+        
         // Transformer les données pour correspondre à l'interface
-        const stagiairesMapped = data.stagiaires.map((s: any) => ({
+        const stagiairesMapped = stagiairesList.map((s: any) => ({
           id: s.id,
           user_id: s.user_id,
-          users: s.users,
+          users: s.users || { name: "Nom non défini", email: "Email non défini" },
           specialite: s.entreprise || "Non définie",
           niveau: s.poste || "Non défini",
           tuteur_id: s.tuteur_id,
           tuteur: s.tuteur
         }))
+        
+        console.log("✅ Stagiaires mappés:", stagiairesMapped)
         setStagiaires(stagiairesMapped)
       } else {
+        console.log("❌ Aucun stagiaire trouvé dans la réponse:", data)
         setStagiaires([])
       }
     } catch (error) {
@@ -263,10 +276,7 @@ export default function NouvelleEvaluationPage() {
                   <SelectContent>
                     {stagiaires.map((stagiaire) => (
                       <SelectItem key={stagiaire.id} value={stagiaire.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{stagiaire.users?.name || "Nom non défini"}</span>
-                          <span className="text-sm text-gray-500">{stagiaire.specialite} - {stagiaire.niveau}</span>
-                        </div>
+                        {stagiaire.users?.name || "Nom non défini"} - {stagiaire.specialite}
                       </SelectItem>
                     ))}
                   </SelectContent>
