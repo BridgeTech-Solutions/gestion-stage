@@ -14,8 +14,7 @@ export function Footer() {
               <img src="/images/logo.png" alt="Bridge Technologies" className="h-10 w-auto" />
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
-              Bridge Technologies Solutions - Votre partenaire pour la gestion des stages et le développement des
-              compétences. Nous connectons les talents aux opportunités.
+              Bridge Technologies Solutions .
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition-colors">
@@ -64,18 +63,18 @@ export function Footer() {
               <li className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-300 text-sm">
-                  123 Rue de la Technologie
+                  B.P:1418 Douala-Cameroun
                   <br />
                   75001 Paris, France
                 </span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-300 text-sm">+33 1 23 45 67 89</span>
+                <span className="text-gray-300 text-sm">679289166 / 692143811</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail className="h-4 w-4 text-gray-400" />
-                <span className="text-gray-300 text-sm">contact@bridge-tech.fr</span>
+                <span className="text-gray-300 text-sm">contact@bridgetech-solutions.com</span>
               </li>
             </ul>
           </div>
