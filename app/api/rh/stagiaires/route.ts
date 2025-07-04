@@ -31,11 +31,14 @@ export async function GET(request: NextRequest) {
       .from("stagiaires")
       .select(`
         id,
+        user_id,
+        tuteur_id,
         entreprise,
         poste,
         statut,
         date_debut,
         date_fin,
+        created_at,
         users!user_id(
           id,
           name,
@@ -63,6 +66,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      stagiaires: stagiaires || [],
       data: stagiaires || []
     })
 
