@@ -19,20 +19,21 @@ export async function GET(request: NextRequest) {
     console.log("✅ Session trouvée pour évaluations:", session.user.email)
 
     // Vérifier le rôle de l'utilisateur
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from("users")
-      .select("role")
+      .select("role, name")
       .eq("id", session.user.id)
       .single()
 
-    if (!userProfile) {
+    if (profileError || !userProfile) {
+      console.error("❌ Erreur profil utilisateur:", profileError)
       return NextResponse.json(
         { error: 'Utilisateur non trouvé' },
         { status: 404 }
       )
     }
 
-    console.log("✅ Rôle utilisateur:", userProfile.role)
+    console.log("✅ Rôle utilisateur:", userProfile.role, "Nom:", userProfile.name)
 
     const { searchParams } = new URL(request.url)
     const stagiaireId = searchParams.get('stagiaire_id')
@@ -65,6 +66,7 @@ export async function GET(request: NextRequest) {
     // Filtres selon le rôle
     if (userProfile.role === 'tuteur') {
       // Les tuteurs ne voient que les évaluations qu'ils ont créées
+      console.log("🔍 Filtre tuteur - évaluations créées par:", session.user.id)
       query = query.eq('evaluateur_id', session.user.id)
     } else if (userProfile.role === 'stagiaire') {
       // Les stagiaires ne voient que leurs propres évaluations
@@ -75,19 +77,24 @@ export async function GET(request: NextRequest) {
         .single()
       
       if (stagiaireProfile) {
+        console.log("🔍 Filtre stagiaire - évaluations pour:", stagiaireProfile.id)
         query = query.eq('stagiaire_id', stagiaireProfile.id)
       }
+    } else if (['admin', 'rh'].includes(userProfile.role)) {
+      console.log("🔍 Admin/RH - accès à toutes les évaluations")
+      // Les admins et RH voient toutes les évaluations (pas de filtre supplémentaire)
     }
-    // Les admins et RH voient toutes les évaluations (pas de filtre supplémentaire)
 
+    console.log("🔍 Exécution de la requête évaluations...")
     const { data, error } = await query
 
     if (error) {
       console.error('❌ Erreur get evaluations:', error)
+      console.error('❌ Détails erreur:', error.message, error.hint)
       return NextResponse.json(
         { 
           success: false, 
-          error: 'Erreur lors de la récupération des évaluations',
+          error: 'Erreur lors de la récupération des évaluations: ' + error.message,
           evaluations: []
         },
         { status: 500 }
@@ -95,11 +102,17 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("✅ Évaluations récupérées:", data?.length || 0)
+    
+    // Log des données pour debug
+    if (data && data.length > 0) {
+      console.log("📋 Première évaluation:", JSON.stringify(data[0], null, 2))
+    }
 
     return NextResponse.json({
       success: true,
       evaluations: data || [],
-      total: data?.length || 0
+      total: data?.length || 0,
+      user_role: userProfile.role
     })
 
   } catch (error) {
