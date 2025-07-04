@@ -159,6 +159,37 @@ export default function RHDocumentsPage() {
 
   const handleDownload = async (document: Document) => {
     try {
+      // Essayer d'abord le téléchargement depuis le storage
+      if (document.url) {
+        const response = await fetch(`/api/documents/download-from-storage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            path: document.url,
+            filename: document.nom 
+          })
+        })
+        
+        if (response.ok) {
+          const blob = await response.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement("a")
+          a.href = url
+          a.download = document.nom
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+
+          toast({
+            title: "Succès",
+            description: "Document téléchargé avec succès",
+          })
+          return
+        }
+      }
+
+      // Fallback vers l'ancienne méthode
       const response = await fetch(`/api/documents/${document.id}/download`)
 
       if (!response.ok) {
