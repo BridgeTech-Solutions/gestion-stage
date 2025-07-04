@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
@@ -8,7 +7,7 @@ export async function GET(
 ) {
   try {
     const supabase = createClient()
-    
+
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -46,18 +45,20 @@ export async function GET(
     }
 
     // Télécharger le fichier depuis Supabase Storage
-    const filePath = document.url || document.chemin || document.chemin_fichier
-    
+    const filePath = document.chemin_fichier || document.url
+
     if (!filePath) {
       return NextResponse.json({ error: "Chemin de fichier non trouvé" }, { status: 404 })
     }
+
+    console.log("📁 Tentative de téléchargement:", filePath)
 
     const { data: fileData, error: downloadError } = await supabase.storage
       .from("documents")
       .download(filePath)
 
     if (downloadError) {
-      console.error("Erreur téléchargement storage:", downloadError)
+      console.error("❌ Erreur téléchargement storage:", downloadError)
       return NextResponse.json({ error: "Fichier non trouvé dans le storage" }, { status: 404 })
     }
 
@@ -79,34 +80,18 @@ export async function GET(
       }
     }
 
+    const contentType = document.type_fichier || getContentType(document.nom)
+
     return new NextResponse(buffer, {
       headers: {
-        'Content-Type': getContentType(document.nom),
+        'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${document.nom}"`,
         'Content-Length': buffer.byteLength.toString(),
       },
     })
 
   } catch (error) {
-    console.error("Erreur API download:", error)
+    console.error("💥 Erreur API download:", error)
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 })
-  }
-}n_fichier)
-
-    if (downloadError || !fileData) {
-      return NextResponse.json({ error: "Erreur lors du téléchargement" }, { status: 500 })
-    }
-
-    // Retourner le fichier
-    return new NextResponse(fileData, {
-      headers: {
-        'Content-Type': document.type_fichier || 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${document.nom}"`,
-      },
-    })
-
-  } catch (error) {
-    console.error("Erreur téléchargement document:", error)
-    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 })
   }
 }
