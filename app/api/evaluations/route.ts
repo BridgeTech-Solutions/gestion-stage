@@ -55,15 +55,14 @@ export async function GET(request: NextRequest) {
       .from('evaluations')
       .select(`
         *,
-        stagiaire:stagiaires!inner(
+        stagiaire:stagiaires(
           id,
           user_id,
           specialite,
           niveau,
-          users!inner(name, email),
-          tuteur:users!stagiaires_tuteur_id_fkey(name, email)
+          users(name, email)
         ),
-        evaluateur:users!evaluations_evaluateur_id_fkey(name, email)
+        evaluateur:users!evaluateur_id(name, email)
       `)
       .order('created_at', { ascending: false })
 
@@ -105,7 +104,42 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('❌ Erreur get evaluations:', error)
-      console.error('❌ Détails erreur:', error.message, error.hint)
+      console.error('❌ Détails erreur:', {
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code
+      })
+      
+      // Si c'est un problème de relation, essayer une requête plus simple
+      if (error.code === 'PGRST116' || error.message.includes('foreign key')) {
+        console.log("🔄 Tentative de requête simplifiée...")
+        const { data: simpleData, error: simpleError } = await supabase
+          .from('evaluations')
+          .select('*')
+          .order('created_at', { ascending: false })
+          
+        if (simpleError) {
+          console.error('❌ Erreur requête simple:', simpleError)
+          return NextResponse.json(
+            { 
+              success: false, 
+              error: 'Erreur lors de la récupération des évaluations: ' + simpleError.message,
+              evaluations: []
+            },
+            { status: 500 }
+          )
+        }
+        
+        return NextResponse.json({
+          success: true,
+          evaluations: simpleData || [],
+          total: simpleData?.length || 0,
+          user_role: userProfile.role,
+          warning: 'Données simplifiées - relations non chargées'
+        })
+      }
+      
       return NextResponse.json(
         { 
           success: false, 
@@ -179,26 +213,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Préparer les données pour l'insertion
+    // Préparer les données pour l'insertion - convertir les valeurs null/undefined
     const insertData = {
       stagiaire_id: evaluationData.stagiaire_id,
       evaluateur_id: session.user.id,
-      periode_debut: evaluationData.periode_debut,
-      periode_fin: evaluationData.periode_fin,
+      periode_debut: evaluationData.periode_debut || null,
+      periode_fin: evaluationData.periode_fin || null,
       type: evaluationData.type || 'mi_parcours',
-      note_globale: evaluationData.note_globale || 0,
-      competences_techniques: evaluationData.competences_techniques || 0,
-      competences_relationnelles: evaluationData.competences_relationnelles || 0,
-      autonomie: evaluationData.autonomie || 0,
-      ponctualite: evaluationData.ponctualite || 0,
-      motivation: evaluationData.motivation || 0,
-      commentaires: evaluationData.commentaires || '',
-      points_forts: evaluationData.points_forts || '',
-      axes_amelioration: evaluationData.axes_amelioration || '',
-      objectifs_suivants: evaluationData.objectifs_suivants || '',
-      recommandations: evaluationData.recommandations || '',
-      statut: evaluationData.statut || 'brouillon',
-      created_at: new Date().toISOString()
+      note_globale: Number(evaluationData.note_globale) || 0,
+      competences_techniques: Number(evaluationData.competences_techniques) || 0,
+      competences_relationnelles: Number(evaluationData.competences_relationnelles) || 0,
+      autonomie: Number(evaluationData.autonomie) || 0,
+      ponctualite: Number(evaluationData.ponctualite) || 0,
+      motivation: Number(evaluationData.motivation) || 0,
+      commentaires: evaluationData.commentaires || null,
+      points_forts: evaluationData.points_forts || null,
+      axes_amelioration: evaluationData.axes_amelioration || null,
+      objectifs_suivants: evaluationData.objectifs_suivants || null,
+      recommandations: evaluationData.recommandations || null,
+      statut: evaluationData.statut || 'brouillon'
     }
 
     console.log("💾 Données à insérer:", insertData)
@@ -206,21 +239,32 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('evaluations')
       .insert(insertData)
-      .select(`
-        *,
-        stagiaire:stagiaires!inner(
-          id,
-          user_id,
-          specialite,
-          niveau,
-          users!inner(name, email)
-        ),
-        evaluateur:users!evaluations_evaluateur_id_fkey(name, email)
-      `)
+      .select('*')
 
     if (error) {
       console.error('❌ Erreur create evaluation:', error)
-      console.error('❌ Détails erreur:', error.message, error.hint, error.details)
+      console.error('❌ Détails erreur:', {
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code
+      })
+      
+      // Retourner des erreurs plus spécifiques
+      if (error.code === '23503') {
+        return NextResponse.json(
+          { error: 'Clé étrangère invalide - vérifiez que le stagiaire et l\'évaluateur existent' },
+          { status: 400 }
+        )
+      }
+      
+      if (error.code === '23505') {
+        return NextResponse.json(
+          { error: 'Une évaluation existe déjà pour ce stagiaire dans cette période' },
+          { status: 409 }
+        )
+      }
+      
       return NextResponse.json(
         { error: 'Erreur lors de la création de l\'évaluation: ' + error.message },
         { status: 500 }
