@@ -15,34 +15,26 @@ export async function GET() {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    // Vérifier le rôle de l'utilisateur
-    const { data: profile, error: profileError } = await supabase
+    // Vérifier le rôle tuteur
+    const { data: profile } = await supabase
       .from("users")
       .select("id, role")
       .eq("id", user.id)
       .single()
 
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { error: "Profil utilisateur non trouvé" },
-        { status: 404 }
-      )
+    if (!profile || profile.role !== "tuteur") {
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 })
     }
 
-    if (profile.role !== "tuteur") {
-      return NextResponse.json(
-        { error: "Accès non autorisé - rôle tuteur requis" },
-        { status: 403 }
-      )
-    }
-
-    const { data, error } = await supabase
+    // Récupérer les stagiaires assignés au tuteur
+    const { data: stagiaires, error } = await supabase
       .from("stagiaires")
       .select(`
         *,
         user:users!stagiaires_user_id_fkey(id, name, email, phone, is_active)
       `)
-      .eq("tuteur_id", user.id)
+      .eq("tuteur_id", profile.id)
+      .order("created_at", { ascending: false })
 
     if (error) {
       console.error("❌ Erreur récupération stagiaires tuteur:", error)
@@ -60,9 +52,9 @@ export async function GET() {
   } catch (error) {
     console.error("💥 Erreur API stagiaires tuteur:", error)
     return NextResponse.json({
-      success: false,
-      error: "Erreur serveur interne",
-      data: []
-    }, { status: 500 })
+      success: true,
+      data: [],
+      message: "Erreur serveur interne"
+    })
   }
 }

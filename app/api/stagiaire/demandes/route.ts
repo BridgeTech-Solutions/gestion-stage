@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
         prolongationData: prolongationData || {},
         date_creation: new Date().toISOString()
       },
+      tuteur_id: body.tuteur_id, // <-- doit être présent ici
     }
 
     // Créer la demande
