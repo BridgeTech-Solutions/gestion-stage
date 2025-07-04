@@ -94,6 +94,8 @@ export default function RHEvaluationsPage() {
 
   const loadEvaluations = async () => {
     try {
+      console.log("🔄 Chargement des évaluations...")
+      
       const response = await fetch('/api/evaluations', {
         method: 'GET',
         credentials: 'include',
@@ -102,24 +104,45 @@ export default function RHEvaluationsPage() {
         }
       })
 
+      console.log("📡 Réponse API évaluations status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Erreur lors du chargement")
+        const errorText = await response.text()
+        console.error("❌ Erreur réponse évaluations:", errorText)
+        throw new Error(`Erreur ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()
+      console.log("📋 Données évaluations reçues:", data)
 
       if (data.success) {
         setEvaluations(data.evaluations || [])
         setFilteredEvaluations(data.evaluations || [])
+        
+        if (data.warning) {
+          console.warn("⚠️ Avertissement:", data.warning)
+          toast({
+            title: "Avertissement",
+            description: data.warning,
+            variant: "default",
+          })
+        }
       } else {
+        console.error("❌ Réponse non successful:", data)
         setEvaluations([])
         setFilteredEvaluations([])
+        
+        toast({
+          title: "Erreur",
+          description: data.error || "Impossible de charger les évaluations",
+          variant: "destructive",
+        })
       }
     } catch (error) {
-      console.error("Erreur lors du chargement des évaluations:", error)
+      console.error("💥 Erreur lors du chargement des évaluations:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger les évaluations",
+        description: error instanceof Error ? error.message : "Impossible de charger les évaluations",
         variant: "destructive",
       })
       setEvaluations([])
