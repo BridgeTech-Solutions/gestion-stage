@@ -5,12 +5,24 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
+    if (!supabase) {
+      console.error("❌ Impossible de créer le client Supabase")
+      return NextResponse.json(
+        { error: 'Erreur de configuration' },
+        { status: 500 }
+      )
+    }
+
     const { data: { session }, error: authError } = await supabase.auth.getSession()
 
     if (authError || !session) {
       console.error("❌ Erreur auth évaluations:", authError)
       return NextResponse.json(
-        { error: 'Non autorisé' },
+        { 
+          success: false,
+          error: 'Non autorisé',
+          evaluations: []
+        },
         { status: 401 }
       )
     }
