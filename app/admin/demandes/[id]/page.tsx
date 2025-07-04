@@ -68,7 +68,7 @@ export default function DemandeDetailPage() {
   }, [params.id])
   const loadDocuments = async () => {
     try {
-      const response = await fetch(`/api/documents?demande_id=${params.id}`, { credentials: "include" })
+      const response = await fetch(`/api/demandes/${params.id}/documents`, { credentials: "include" })
       const data = await response.json()
       if (response.ok && data.data) {
         setDocuments(data.data)
