@@ -62,6 +62,51 @@ export default function DemandeDetailPage() {
   const [statut, setStatut] = useState("")
   const [commentaireReponse, setCommentaireReponse] = useState("")
 
+  const handleDownloadDocument = async (doc: Document) => {
+    try {
+      // Si le document a une URL (stocké dans le bucket)
+      if (doc.url || doc.chemin) {
+        const response = await fetch(`/api/documents/download-from-storage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            path: doc.url || doc.chemin,
+            filename: doc.nom 
+          })
+        })
+        
+        if (response.ok) {
+          const blob = await response.blob()
+          const url = window.URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.style.display = 'none'
+          a.href = url
+          a.download = doc.nom
+          document.body.appendChild(a)
+          a.click()
+          window.URL.revokeObjectURL(url)
+          document.body.removeChild(a)
+        } else {
+          toast({
+            title: "Erreur",
+            description: "Impossible de télécharger le document",
+            variant: "destructive",
+          })
+        }
+      } else {
+        // Fallback vers l'ancienne API
+        window.open(`/api/documents/${doc.id}/download`, '_blank')
+      }
+    } catch (error) {
+      console.error('Erreur téléchargement:', error)
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement",
+        variant: "destructive",
+      })
+    }
+  }
+
   useEffect(() => {
     loadDemande()
     loadDocuments()
@@ -337,12 +382,14 @@ export default function DemandeDetailPage() {
               {documents.map((doc) => (
                 <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
                   <span>{doc.nom}</span>
-                  <a href={`/api/documents/${doc.id}/download`} target="_blank" rel="noopener noreferrer">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Télécharger
-                    </Button>
-                  </a>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDownloadDocument(doc)}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </Button>
                 </div>
               ))}
             </div>
