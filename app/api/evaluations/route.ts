@@ -55,14 +55,14 @@ export async function GET(request: NextRequest) {
       .from('evaluations')
       .select(`
         *,
-        stagiaire:stagiaires(
+        stagiaire:stagiaires!stagiaire_id(
           id,
           user_id,
           specialite,
           niveau,
-          users(name, email)
+          users!stagiaires_user_id_fkey(name, email)
         ),
-        evaluateur:users(name, email)
+        evaluateur:users!evaluateur_id(name, email)
       `)
       .order('created_at', { ascending: false })
 
@@ -112,8 +112,35 @@ export async function GET(request: NextRequest) {
       })
       
       // Si c'est un problème de relation, essayer une requête plus simple
-      if (error.code === 'PGRST116' || error.message.includes('foreign key')) {
+      if (error.code === 'PGRST116' || error.message.includes('foreign key') || error.message.includes('relation')) {
         console.log("🔄 Tentative de requête simplifiée...")
+        
+        // Essayer d'abord une requête avec relations simplifiées
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('evaluations')
+            .select(`
+              *,
+              stagiaires(id, user_id, specialite, niveau),
+              users(name, email)
+            `)
+            .order('created_at', { ascending: false })
+            
+          if (!fallbackError && fallbackData) {
+            console.log("✅ Requête fallback réussie")
+            return NextResponse.json({
+              success: true,
+              evaluations: fallbackData || [],
+              total: fallbackData?.length || 0,
+              user_role: userProfile.role,
+              warning: 'Relations simplifiées'
+            })
+          }
+        } catch (fallbackErr) {
+          console.log("❌ Requête fallback échouée, passage à la requête simple")
+        }
+        
+        // En dernier recours, requête simple sans relations
         const { data: simpleData, error: simpleError } = await supabase
           .from('evaluations')
           .select('*')
@@ -136,7 +163,7 @@ export async function GET(request: NextRequest) {
           evaluations: simpleData || [],
           total: simpleData?.length || 0,
           user_role: userProfile.role,
-          warning: 'Données simplifiées - relations non chargées'
+          warning: 'Données sans relations - problème de base de données'
         })
       }
       
@@ -166,8 +193,20 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('💥 Erreur evaluations:', error)
+    
+    // Log détaillé pour debug
+    if (error instanceof Error) {
+      console.error('💥 Message:', error.message)
+      console.error('💥 Stack:', error.stack)
+    }
+    
     return NextResponse.json(
-      { error: 'Erreur serveur' },
+      { 
+        success: false,
+        error: 'Erreur serveur interne',
+        evaluations: [],
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      },
       { status: 500 }
     )
   }
