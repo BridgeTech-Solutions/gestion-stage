@@ -132,37 +132,46 @@ export function Header({ user, showAuth = false }: HeaderProps) {
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
       <div className="flex items-center justify-between">
-        <Link href="/" className="flex items-center space-x-2">
-          <img src="/images/logo.png" alt="Bridge Technologies Solutions" className="h-10 w-auto" />
+        <Link href="https://bridgetech-solutions.com" className="flex items-center space-x-2">
+          <img src="/images/logo.png" alt="Bridge Technologies Solutions" className="h-10 w-auto dark:hidden" />
+          <img
+  src="/images/logo-white.png"
+  alt="Bridge Technologies Solutions"
+  className="hidden dark:block h-10 w-auto"
+/>  
         </Link>
 
         {!showAuth && (
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link
-              href="/"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
-              Accueil
-            </Link>
-            <Link
-              href="/contacts"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
-              Contacts
-            </Link>
-            <Link
-              href="/entreprise"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
-              Entreprise
-            </Link>
-            <Link
-              href="/services"
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition-colors"
-            >
-              Services
-            </Link>
-          </nav>
+          <nav className="hidden md:flex flex-1 justify-center items-center space-x-8">
+  <Link
+    href="https://bridgetech-solutions.com"
+    className="group relative inline-block px-3 py-1 text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 hover:text-blue-600 dark:hover:text-blue-400"
+  >
+    Accueil
+    <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-300 group-hover:w-full" aria-hidden="true"></span>
+  </Link>
+  <Link
+    href="https://bridgetech-solutions.com/?page=contact"
+    className="group relative inline-block px-3 py-1 text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 hover:text-blue-600 dark:hover:text-blue-400"
+  >
+    Contacts
+    <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-300 group-hover:w-full" aria-hidden="true"></span>
+  </Link>
+  <Link
+    href="https://bridgetech-solutions.com/?page=entreprise"
+    className="group relative inline-block px-3 py-1 text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 hover:text-blue-600 dark:hover:text-blue-400"
+  >
+    Entreprise
+    <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-300 group-hover:w-full" aria-hidden="true"></span>
+  </Link>
+  <Link
+    href="https://bridgetech-solutions.com/?page=projet"
+    className="group relative inline-block px-3 py-1 text-gray-700 dark:text-gray-300 font-medium transition-colors duration-200 hover:text-blue-600 dark:hover:text-blue-400"
+  >
+    Services
+    <span className="absolute left-0 -bottom-0.5 w-0 h-0.5 bg-blue-600 dark:bg-blue-400 transition-all duration-300 group-hover:w-full" aria-hidden="true"></span>
+  </Link>
+</nav>
         )}
 
         <div className="flex items-center space-x-4">
@@ -171,7 +180,12 @@ export function Header({ user, showAuth = false }: HeaderProps) {
               {/* Notifications */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="relative">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="relative"
+                    onClick={loadNotifications} // <-- recharge à chaque ouverture
+                  >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
@@ -287,9 +301,9 @@ export function Header({ user, showAuth = false }: HeaderProps) {
           ) : (
             <>
               <LanguageSelector />
-              <ThemeToggle />
             </>
           )}
+          <ThemeToggle /> {/* Toujours visible, à la fin du bloc */}
         </div>
       </div>
     </header>
