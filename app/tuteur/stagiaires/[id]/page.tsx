@@ -12,8 +12,9 @@ import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 
+// Interfaces pour typer les données
 interface Stagiaire {
-  id: string
+  user_id: string
   users: {
     name: string
     email: string
@@ -42,9 +43,11 @@ interface Document {
   type: string
   date_upload: string
   taille?: number
+  url?: string
 }
 
 export default function StagiaireDetailPage() {
+  // États pour stocker les infos utilisateur, stagiaire, évaluations, documents, etc.
   const [user, setUser] = useState<any>(null)
   const [stagiaire, setStagiaire] = useState<Stagiaire | null>(null)
   const [evaluations, setEvaluations] = useState<Evaluation[]>([])
@@ -56,6 +59,7 @@ export default function StagiaireDetailPage() {
   const supabase = createClient()
   const { toast } = useToast()
 
+  // Effet pour vérifier l'authentification et charger le stagiaire
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -74,21 +78,34 @@ export default function StagiaireDetailPage() {
 
       setUser(profile)
       await loadStagiaire()
-      await loadEvaluations()
-      await loadDocuments()
       setLoading(false)
     }
 
     checkAuth()
   }, [router, supabase, params.id])
 
+  // Effet pour charger les documents du stagiaire quand il est chargé
+  useEffect(() => {
+    if (stagiaire?.user_id) {
+      loadDocuments()
+    }
+  }, [stagiaire])
+
+  // Effet pour charger les évaluations quand l'utilisateur et le stagiaire sont chargés
+  useEffect(() => {
+    if (user?.id && params.id) {
+      loadEvaluations()
+    }
+  }, [user, params.id])
+
+  // Fonction pour charger les infos du stagiaire
   const loadStagiaire = async () => {
     try {
       const { data, error } = await supabase
         .from("stagiaires")
         .select(`
           *,
-          users!inner(name, email, phone)
+          users:users!stagiaires_user_id_fkey(name, email, phone)
         `)
         .eq("id", params.id)
         .single()
@@ -105,6 +122,7 @@ export default function StagiaireDetailPage() {
     }
   }
 
+  // Fonction pour charger les évaluations du stagiaire
   const loadEvaluations = async () => {
     try {
       const { data, error } = await supabase
@@ -121,13 +139,14 @@ export default function StagiaireDetailPage() {
     }
   }
 
+  // Fonction pour charger les documents du stagiaire
   const loadDocuments = async () => {
     try {
       const { data, error } = await supabase
         .from("documents")
         .select("*")
-        .eq("stagiaire_id", params.id)
-        .order("date_upload", { ascending: false })
+        .eq("user_id", stagiaire?.user_id)
+        .order("updated_at", { ascending: false })
 
       if (error) throw error
       setDocuments(data || [])
@@ -136,6 +155,7 @@ export default function StagiaireDetailPage() {
     }
   }
 
+  // Fonction utilitaire pour obtenir la couleur du badge selon le statut
   const getStatusColor = (status: string) => {
     switch (status) {
       case "actif":
@@ -151,6 +171,7 @@ export default function StagiaireDetailPage() {
     }
   }
 
+  // Calcule la progression du stage en pourcentage
   const calculateProgress = () => {
     if (!stagiaire) return 0
     const start = new Date(stagiaire.date_debut)
@@ -165,10 +186,12 @@ export default function StagiaireDetailPage() {
     return Math.round((elapsed / total) * 100)
   }
 
+  // Formate une date pour affichage
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR")
   }
 
+  // Formate la taille d'un fichier pour affichage
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return "N/A"
     const sizes = ["Bytes", "KB", "MB", "GB"]
@@ -176,6 +199,7 @@ export default function StagiaireDetailPage() {
     return Math.round((bytes / Math.pow(1024, i)) * 100) / 100 + " " + sizes[i]
   }
 
+  // Affiche un loader pendant le chargement
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -186,11 +210,13 @@ export default function StagiaireDetailPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header de la page */}
       <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Bouton retour et titre */}
         <div className="mb-8">
-          <Button variant="ghost" onClick={() => router.back()} className="mb-4">
+          <Button variant="ghost" onClick={() => router.back()} className="mb-4 transition-transform duration-300 hover:scale-105">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Retour
           </Button>
@@ -204,11 +230,14 @@ export default function StagiaireDetailPage() {
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={() => router.push(`/tuteur/stagiaires/${params.id}/evaluation`)}>
+              <Button
+                onClick={() => router.push(`/tuteur/stagiaires/${params.id}/evaluation`)}
+                className="transition-transform duration-300 hover:scale-105"
+              >
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Nouvelle évaluation
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" className="transition-transform duration-300 hover:scale-105">
                 <MessageSquare className="mr-2 h-4 w-4" />
                 Contacter
               </Button>
@@ -218,7 +247,8 @@ export default function StagiaireDetailPage() {
 
         {/* Informations générales */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="lg:col-span-2">
+          {/* Card infos personnelles */}
+          <Card className="lg:col-span-2 transition-all duration-300 hover:scale-85 hover:shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -258,7 +288,8 @@ export default function StagiaireDetailPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          {/* Card progression */}
+          <Card className="transition-all duration-300 hover:scale-85 hover:shadow-xl" style={{ animationDelay: "0.1s" }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
@@ -287,16 +318,16 @@ export default function StagiaireDetailPage() {
           </Card>
         </div>
 
-        {/* Onglets */}
+        {/* Onglets pour évaluations et documents */}
         <Tabs defaultValue="evaluations" className="space-y-4">
           <TabsList>
             <TabsTrigger value="evaluations">Évaluations</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            <TabsTrigger value="activites">Activités</TabsTrigger>
           </TabsList>
 
+          {/* Onglet Évaluations */}
           <TabsContent value="evaluations">
-            <Card>
+            <Card className="transition-all duration-300 hover:scale-85 hover:shadow-xl" style={{ animationDelay: "0.2s" }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ClipboardList className="h-5 w-5" />
@@ -312,7 +343,10 @@ export default function StagiaireDetailPage() {
                       Commencez par créer une évaluation pour ce stagiaire.
                     </p>
                     <div className="mt-6">
-                      <Button onClick={() => router.push(`/tuteur/stagiaires/${params.id}/evaluation`)}>
+                      <Button
+                        onClick={() => router.push(`/tuteur/stagiaires/${params.id}/evaluation`)}
+                        className="transition-transform duration-300 hover:scale-105"
+                      >
                         <ClipboardList className="mr-2 h-4 w-4" />
                         Nouvelle évaluation
                       </Button>
@@ -321,7 +355,11 @@ export default function StagiaireDetailPage() {
                 ) : (
                   <div className="space-y-4">
                     {evaluations.map((evaluation) => (
-                      <div key={evaluation.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                      <div
+                        key={evaluation.id}
+                        className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg animate-fade-in-up"
+                        style={{ animationDelay: "0.25s" }}
+                      >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold">{evaluation.type.replace("_", " ")}</h3>
                           <div className="flex items-center gap-2">
@@ -345,8 +383,9 @@ export default function StagiaireDetailPage() {
             </Card>
           </TabsContent>
 
+          {/* Onglet Documents */}
           <TabsContent value="documents">
-            <Card>
+            <Card className="transition-all duration-300 hover:scale-[1.03] hover:shadow-xl animate-fade-in-up" style={{ animationDelay: "0.3s" }}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -367,7 +406,8 @@ export default function StagiaireDetailPage() {
                     {documents.map((document) => (
                       <div
                         key={document.id}
-                        className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg"
+                        className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-lg animate-fade-in-up"
+                        style={{ animationDelay: "0.35s" }}
                       >
                         <div className="flex items-center gap-3">
                           <FileText className="h-5 w-5 text-gray-400" />
@@ -378,33 +418,24 @@ export default function StagiaireDetailPage() {
                             </p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Télécharger
-                        </Button>
+                        {/* Bouton de téléchargement */}
+                        {document.url ? (
+                          <a
+                            href={document.url}
+                            download={document.nom}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 transition"
+                          >
+                            Télécharger
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400">Non disponible</span>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="activites">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5" />
-                  Activités récentes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucune activité</h3>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Les activités récentes apparaîtront ici.
-                  </p>
-                </div>
               </CardContent>
             </Card>
           </TabsContent>

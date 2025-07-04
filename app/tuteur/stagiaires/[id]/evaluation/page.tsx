@@ -33,7 +33,7 @@ interface EvaluationForm {
   ponctualite: number
   commentaires: string
   points_forts: string
-  axes_amelioration: string
+  points_amelioration: string
   objectifs_suivants: string
 }
 
@@ -52,7 +52,7 @@ export default function StagiaireEvaluationPage() {
     ponctualite: 10,
     commentaires: "",
     points_forts: "",
-    axes_amelioration: "",
+    points_amelioration: "",
     objectifs_suivants: "",
   })
 
@@ -91,7 +91,7 @@ export default function StagiaireEvaluationPage() {
         .from("stagiaires")
         .select(`
           *,
-          users!inner(name, email)
+          users:users!stagiaires_user_id_fkey(name, email)
         `)
         .eq("id", params.id)
         .single()
@@ -111,6 +111,23 @@ export default function StagiaireEvaluationPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      const { data: existing, error: checkError } = await supabase
+        .from("evaluations")
+        .select("id")
+        .eq("stagiaire_id", params.id)
+        .eq("type", evaluation.type)
+        .eq("date_evaluation", new Date().toISOString().slice(0, 10)) // ou la même logique que pour l'insertion
+
+      if (existing && existing.length > 0) {
+        toast({
+          title: "Erreur",
+          description: "Une évaluation de ce type existe déjà pour ce stagiaire à cette date.",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
       const { error } = await supabase.from("evaluations").insert([
         {
           ...evaluation,
@@ -326,12 +343,12 @@ export default function StagiaireEvaluationPage() {
               </div>
 
               <div>
-                <Label htmlFor="axes_amelioration">Axes d'amélioration</Label>
+                <Label htmlFor="points_amelioration">Points d'amélioration</Label>
                 <Textarea
-                  id="axes_amelioration"
-                  value={evaluation.axes_amelioration}
-                  onChange={(e) => updateEvaluation("axes_amelioration", e.target.value)}
-                  placeholder="Quels sont les axes d'amélioration ?"
+                  id="points_amelioration"
+                  value={evaluation.points_amelioration}
+                  onChange={(e) => updateEvaluation("points_amelioration", e.target.value)}
+                  placeholder="Quels sont les points d'amélioration ?"
                   rows={3}
                 />
               </div>

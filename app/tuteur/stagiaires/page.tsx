@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
-import { Users, Search, Eye, ClipboardList } from "lucide-react"
+import { Users, Search, Eye, ClipboardList, ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
@@ -143,6 +143,16 @@ export default function TuteurStagiairesPage() {
       <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Bouton de retour */}
+        <Button
+          variant="ghost"
+          className="mb-6 transition-transform duration-300 hover:scale-105"
+          onClick={() => router.push("/tuteur")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Mes stagiaires</h1>
           <p className="text-gray-600">Suivi et encadrement de vos stagiaires</p>
@@ -150,7 +160,7 @@ export default function TuteurStagiairesPage() {
 
         {/* Statistiques rapides */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card>
+          <Card className=" transition-all duration-300 hover:scale-85 hover:shadow-xl">
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-blue-600" />
@@ -161,7 +171,7 @@ export default function TuteurStagiairesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className=" transition-all duration-300 hover:scale-85 hover:shadow-xl">
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-green-600" />
@@ -174,7 +184,7 @@ export default function TuteurStagiairesPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className=" transition-all duration-300 hover:scale-85 hover:shadow-xl">
             <CardContent className="p-6">
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-gray-600" />
@@ -190,7 +200,7 @@ export default function TuteurStagiairesPage() {
         </div>
 
         {/* Recherche */}
-        <Card className="mb-6">
+        <Card className="mb-6 transition-all duration-300 hover:scale-85 hover:shadow-xl">
           <CardContent className="p-6">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />

@@ -23,6 +23,7 @@ interface Document {
 }
 
 export default function StagiaireDocumentsPage() {
+  // États pour l'utilisateur, les documents, la recherche, etc.
   const [user, setUser] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([])
@@ -32,6 +33,7 @@ export default function StagiaireDocumentsPage() {
   const supabase = createClient()
   const { toast } = useToast()
 
+  // Effet pour vérifier l'authentification et charger les documents
   useEffect(() => {
     const checkAuth = async () => {
       const {
@@ -56,6 +58,7 @@ export default function StagiaireDocumentsPage() {
     checkAuth()
   }, [router, supabase])
 
+  // Fonction pour charger les documents du stagiaire
   const loadDocuments = async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -77,6 +80,7 @@ export default function StagiaireDocumentsPage() {
     }
   }
 
+  // Effet pour filtrer les documents selon la recherche
   useEffect(() => {
     let filtered = documents
 
@@ -91,6 +95,7 @@ export default function StagiaireDocumentsPage() {
     setFilteredDocuments(filtered)
   }, [documents, searchQuery])
 
+  // Formate la taille du fichier pour l'affichage
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return "0 Bytes"
     const k = 1024
@@ -99,10 +104,12 @@ export default function StagiaireDocumentsPage() {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
+  // Formate la date pour l'affichage
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("fr-FR")
   }
 
+  // Affichage du loader pendant le chargement
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -111,11 +118,13 @@ export default function StagiaireDocumentsPage() {
     )
   }
 
+  // Affichage principal de la page
   return (
     <div className="min-h-screen bg-gray-50">
       <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Titre et description */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Mes documents</h1>
           <p className="text-gray-600">Gérer vos documents personnels</p>
@@ -154,6 +163,7 @@ export default function StagiaireDocumentsPage() {
           </CardHeader>
           <CardContent>
             {filteredDocuments.length === 0 ? (
+              // Affichage si aucun document n'est présent
               <div className="text-center py-8">
                 <FileText className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun document</h3>
@@ -166,6 +176,7 @@ export default function StagiaireDocumentsPage() {
                 </div>
               </div>
             ) : (
+              // Tableau des documents
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -193,12 +204,24 @@ export default function StagiaireDocumentsPage() {
                       <TableCell>{formatDate(document.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
+                          {/* 
+                          // Bouton pour télécharger le document 
+                          // On utilise un lien <a> avec l'attribut download pour permettre le téléchargement direct
+                          */}
+                          <a
+                            href={document.url}
+                            download={document.nom}
+                            className="inline-flex items-center justify-center rounded border border-gray-300 bg-green-100 text-green-700 hover:bg-green-200 transition px-2 py-1"
+                            title="Télécharger"
+                          >
                             <Download className="h-4 w-4" />
-                          </Button>
+                          </a>
+                          {/* 
+                          // Bouton pour voir le document supprimé (Eye)
+                          */}
+                          {/* <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button> */}
                         </div>
                       </TableCell>
                     </TableRow>

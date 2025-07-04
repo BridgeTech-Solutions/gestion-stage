@@ -13,6 +13,7 @@ import { Plus, Upload, ArrowLeft } from "lucide-react"
 
 export default function NouvelleDemandePage() {
   const [user, setUser] = useState<any>(null)
+  const [tuteur, setTuteur] = useState<any>(null);
   const [demandType, setDemandType] = useState("stage_academique")
   type DocumentKeys =
     | "cv"
@@ -143,6 +144,19 @@ export default function NouvelleDemandePage() {
 
     checkAuth()
   }, [router, supabase])
+
+  useEffect(() => {
+    const fetchTuteur = async () => {
+      if (!user) return;
+      const { data: stagiaire } = await supabase
+        .from("stagiaires")
+        .select("tuteur_id")
+        .eq("user_id", user.id)
+        .single();
+      setTuteur(stagiaire?.tuteur_id || null);
+    };
+    fetchTuteur();
+  }, [user]);
 
   const uploadFile = async (
     file: File,
@@ -282,13 +296,13 @@ export default function NouvelleDemandePage() {
       }
     }
 
-    // Validation pour stage professionnel
+    // Validation pour stage professionnel (lettre de recommandation optionnelle)
     if (demandType === "stage_professionnel") {
       const requiredDocs = [
         "cv",
         "certificat_scolarite",
         "lettre_motivation",
-        "lettre_recommandation",
+        // "lettre_recommandation", // <-- ENLEVÉ de la validation obligatoire
         "dernier_diplome",
         "piece_identite",
       ]
@@ -298,7 +312,7 @@ export default function NouvelleDemandePage() {
             cv: "CV",
             certificat_scolarite: "Certificat de scolarité",
             lettre_motivation: "Lettre de motivation",
-            lettre_recommandation: "Lettre de recommandation",
+            // lettre_recommandation: "Lettre de recommandation",
             dernier_diplome: "Dernier diplôme",
             piece_identite: "Pièce d'identité",
           }
@@ -313,7 +327,7 @@ export default function NouvelleDemandePage() {
     }
 
     // Validation pour demande de congé
-    if (demandType === "demande_conge") {
+    if (demandType === "conge") {
       if (!congeData.date_debut || !congeData.date_fin || !congeData.description) {
         toast({
           title: "Champs manquants",
@@ -400,16 +414,22 @@ const documentsArray = validTypes
     url: documents[`${type}_url` as keyof DocumentsState], // <-- AJOUTE CETTE LIGNE
     obligatoire: true,
   }))
-  
-const requestData = {
-  type: demandType,
-  titre,
-  description: "",
-  documents: documentsArray,
-  periode,
-  congeData,
-  prolongationData,
-}
+
+  // Mapping du type pour respecter la contrainte SQL
+  let type = demandType
+  if (demandType === "demande_conge") type = "conge"
+  if (demandType === "demande_prolongation") type = "prolongation"
+
+  const requestData = {
+    type,
+    titre,
+    description: "",
+    documents: documentsArray,
+    periode,
+    congeData,
+    prolongationData,
+    tuteur_id: tuteur ?? null, // <-- ajoute cette ligne
+      }
       console.log("📤 Envoi de la demande:", requestData)
 
       const response = await fetch("/api/stagiaire/demandes", {

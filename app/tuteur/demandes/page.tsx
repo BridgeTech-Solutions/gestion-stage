@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Header } from "@/components/layout/header"
-import { FileText, Search, Eye, CheckCircle, XCircle, Clock } from "lucide-react"
+import { FileText, Search, Eye, CheckCircle, XCircle, Clock, ArrowLeft } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -53,6 +53,7 @@ export default function TuteurDemandesPage() {
   const router = useRouter()
   const supabase = createClient()
   const { toast } = useToast()
+  const params = useSearchParams()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -71,12 +72,16 @@ export default function TuteurDemandesPage() {
       }
 
       setUser(profile)
-      await loadDemandesMesStagiaires(session.user.id)
       setLoading(false)
     }
-
     checkAuth()
-  }, [router, supabase])
+  }, [])
+
+  useEffect(() => {
+    if (user) {
+      loadDemandesMesStagiaires(user.id)
+    }
+  }, [user])
 
   const loadDemandesMesStagiaires = async (tuteurId: string) => {
     try {
@@ -213,6 +218,16 @@ export default function TuteurDemandesPage() {
       <Header user={user} />
 
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {/* Bouton de retour */}
+        <Button
+          variant="ghost"
+          className="mb-6 transition-transform duration-300 hover:scale-105"
+          onClick={() => router.push("/tuteur")}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Demandes de mes stagiaires</h1>
           <p className="text-gray-600">Examiner et valider les demandes de votre équipe</p>

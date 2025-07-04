@@ -37,6 +37,12 @@ interface DemandeDetail {
       email: string
     }
   }
+  documents?: {
+    id: string
+    nom?: string
+    type?: string
+    // Ajoute d'autres champs si besoin
+  }[]
 }
 
 export default function TuteurDemandeDetailPage() {
@@ -69,12 +75,19 @@ export default function TuteurDemandeDetailPage() {
       }
 
       setUser(profile)
-      await loadDemande()
+      // NE PAS appeler loadDemande ici
       setLoading(false)
     }
 
     checkAuth()
   }, [params.id])
+
+  useEffect(() => {
+    if (user) {
+      loadDemande()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, params.id])
 
   const loadDemande = async () => {
     try {
