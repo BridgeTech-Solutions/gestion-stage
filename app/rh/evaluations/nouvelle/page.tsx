@@ -115,24 +115,43 @@ export default function NouvelleEvaluationPage() {
 
   const loadStagiaires = async () => {
     try {
-      const { data, error } = await supabase
-        .from("stagiaires")
-        .select(`
-          *,
-          users!inner(name, email),
-          tuteur:users!stagiaires_tuteur_id_fkey(name, email)
-        `)
-        .eq("statut", "actif")
-        .order("users(name)")
+      const response = await fetch('/api/rh/stagiaires', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
 
-      if (error) {
-        console.error("Erreur chargement stagiaires:", error)
-        return
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des stagiaires")
       }
 
-      setStagiaires(data || [])
+      const data = await response.json()
+
+      if (data.success && data.stagiaires) {
+        // Transformer les données pour correspondre à l'interface
+        const stagiairesMapped = data.stagiaires.map((s: any) => ({
+          id: s.id,
+          user_id: s.user_id,
+          users: s.users,
+          specialite: s.entreprise || "Non définie",
+          niveau: s.poste || "Non défini",
+          tuteur_id: s.tuteur_id,
+          tuteur: s.tuteur
+        }))
+        setStagiaires(stagiairesMapped)
+      } else {
+        setStagiaires([])
+      }
     } catch (error) {
-      console.error("Erreur:", error)
+      console.error("Erreur chargement stagiaires:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les stagiaires",
+        variant: "destructive",
+      })
+      setStagiaires([])
     }
   }
 
@@ -245,7 +264,7 @@ export default function NouvelleEvaluationPage() {
                     {stagiaires.map((stagiaire) => (
                       <SelectItem key={stagiaire.id} value={stagiaire.id}>
                         <div className="flex flex-col">
-                          <span className="font-medium">{stagiaire.users.name}</span>
+                          <span className="font-medium">{stagiaire.users?.name || "Nom non défini"}</span>
                           <span className="text-sm text-gray-500">{stagiaire.specialite} - {stagiaire.niveau}</span>
                         </div>
                       </SelectItem>
@@ -259,16 +278,16 @@ export default function NouvelleEvaluationPage() {
                   <h4 className="font-medium text-blue-900 mb-2">Informations du stagiaire</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="font-medium">Nom:</span> {selectedStagiaire.users.name}
+                      <span className="font-medium">Nom:</span> {selectedStagiaire.users?.name || "Non défini"}
                     </div>
                     <div>
-                      <span className="font-medium">Email:</span> {selectedStagiaire.users.email}
+                      <span className="font-medium">Email:</span> {selectedStagiaire.users?.email || "Non défini"}
                     </div>
                     <div>
-                      <span className="font-medium">Spécialité:</span> {selectedStagiaire.specialite}
+                      <span className="font-medium">Entreprise:</span> {selectedStagiaire.specialite}
                     </div>
                     <div>
-                      <span className="font-medium">Niveau:</span> {selectedStagiaire.niveau}
+                      <span className="font-medium">Poste:</span> {selectedStagiaire.niveau}
                     </div>
                     {selectedStagiaire.tuteur && (
                       <div>
