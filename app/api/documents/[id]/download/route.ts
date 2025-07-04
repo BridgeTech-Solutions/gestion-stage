@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Vérifier l'authentification
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -45,10 +45,18 @@ export async function GET(
     }
 
     // Télécharger le fichier depuis Supabase Storage
-    const filePath = document.chemin_fichier || document.url
+    let filePath = document.chemin_fichier || document.url
 
     if (!filePath) {
       return NextResponse.json({ error: "Chemin de fichier non trouvé" }, { status: 404 })
+    }
+
+    // Nettoyer le chemin du fichier
+    if (filePath.startsWith('/')) {
+      filePath = filePath.substring(1)
+    }
+    if (filePath.startsWith('documents/')) {
+      filePath = filePath.substring(10)
     }
 
     console.log("📁 Tentative de téléchargement:", filePath)
