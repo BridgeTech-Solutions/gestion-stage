@@ -141,80 +141,88 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    console.log("🔍 API Documents GET - Début")
-
     const supabase = await createClient()
 
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
-    if (authError || !session) {
-      console.error("❌ Auth error documents:", authError)
+    // Vérifier l'authentification
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 })
     }
 
-    console.log("✅ GET Documents session:", session.user.email)
-
-    // Vérifier le rôle de l'utilisateur
-    const { data: userProfile, error: profileError } = await supabase
+    // Récupérer le profil utilisateur
+    const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("role")
-      .eq("id", session.user.id)
+      .eq("id", user.id)
       .single()
 
-    if (profileError || !userProfile) {
-      console.error("❌ Erreur profil utilisateur:", profileError)
-      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 })
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "Profil non trouvé" }, { status: 404 })
     }
 
-    console.log("👤 Rôle utilisateur:", userProfile.role)
+    // Récupérer les documents avec une requête sûre
+    let documentsQuery
 
-    let query = supabase
-      .from("documents")
-      .select(`
-        id,
-        nom,
-        type,
-        taille,
-        url,
-        chemin_fichier,
-        type_fichier,
-        is_public,
-        statut,
-        user_id,
-        created_at,
-        users!user_id(name, email)
-      `)
-      .order("created_at", { ascending: false })
-
-    // Filtres selon le rôle
-    if (userProfile.role === 'stagiaire' || userProfile.role === 'tuteur') {
-      // Les stagiaires et tuteurs voient leurs documents + les documents publics
-      query = query.or(`user_id.eq.${session.user.id},is_public.eq.true`)
-      console.log("🔒 Filtre appliqué pour:", userProfile.role)
+    if (["admin", "rh"].includes(profile.role)) {
+      // Admin/RH peuvent voir tous les documents
+      documentsQuery = supabase
+        .from("documents")
+        .select("*")
+        .order("created_at", { ascending: false })
     } else {
-      console.log("🔓 Pas de filtre (admin/rh)")
+      // Autres utilisateurs voient leurs documents + publics
+      documentsQuery = supabase
+        .from("documents")
+        .select("*")
+        .or(`user_id.eq.${user.id},is_public.eq.true`)
+        .order("created_at", { ascending: false })
     }
 
-    const { data: documents, error } = await query
+    const { data: documents, error: documentsError } = await documentsQuery
 
-    if (error) {
-      console.error("❌ Erreur récupération documents:", error)
-      return NextResponse.json({ 
-        error: "Erreur lors de la récupération des documents: " + error.message 
-      }, { status: 500 })
+    if (documentsError) {
+      console.error("Erreur récupération documents:", documentsError)
+      return NextResponse.json({ error: "Erreur lors de la récupération des documents" }, { status: 500 })
     }
 
-    console.log("✅ Documents récupérés:", documents?.length || 0)
+    // Enrichir avec les infos utilisateur en faisant des requêtes séparées
+    const enrichedDocuments = []
+
+    if (documents && documents.length > 0) {
+      for (const doc of documents) {
+        try {
+          const { data: docUser } = await supabase
+            .from("users")
+            .select("name, email")
+            .eq("id", doc.user_id)
+            .single()
+
+          enrichedDocuments.push({
+            ...doc,
+            users: docUser || { name: "Utilisateur inconnu", email: "" }
+          })
+        } catch (error) {
+          // Si pas d'utilisateur trouvé, garder le document sans info utilisateur
+          enrichedDocuments.push({
+            ...doc,
+            users: { name: "Utilisateur inconnu", email: "" }
+          })
+        }
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      documents: documents || [],
-      total: documents?.length || 0
+      documents: enrichedDocuments,
+      data: enrichedDocuments // Pour compatibilité
     })
 
-  } catch (error: any) {
-    console.error("💥 Erreur GET documents:", error)
+  } catch (error) {
+    console.error("Erreur API documents:", error)
     return NextResponse.json({ 
-      error: "Erreur serveur: " + error.message 
+      error: "Erreur serveur", 
+      success: false,
+      documents: []
     }, { status: 500 })
   }
 }
