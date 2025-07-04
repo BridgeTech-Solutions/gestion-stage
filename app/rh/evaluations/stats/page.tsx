@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -82,13 +81,13 @@ export default function RHEvaluationsStatsPage() {
         
         // Calculer les statistiques
         const total = evaluations.length
-        const byStatus = evaluations.reduce((acc: any, eval: any) => {
-          acc[eval.statut] = (acc[eval.statut] || 0) + 1
+        const byStatus = evaluations.reduce((acc: any, evaluation: any) => {
+          acc[evaluation.statut] = (acc[evaluation.statut] || 0) + 1
           return acc
         }, {})
         
-        const byType = evaluations.reduce((acc: any, eval: any) => {
-          acc[eval.type] = (acc[eval.type] || 0) + 1
+        const byType = evaluations.reduce((acc: any, evaluation: any) => {
+          acc[evaluation.type] = (acc[evaluation.type] || 0) + 1
           return acc
         }, {})
 
@@ -97,8 +96,8 @@ export default function RHEvaluationsStatsPage() {
           ? validScores.reduce((sum: number, e: any) => sum + e.note_globale, 0) / validScores.length 
           : 0
 
-        const scoreDistribution = validScores.reduce((acc: any, eval: any) => {
-          const score = eval.note_globale
+        const scoreDistribution = validScores.reduce((acc: any, evaluation: any) => {
+          const score = evaluation.note_globale
           if (score >= 16) acc['Excellent'] = (acc['Excellent'] || 0) + 1
           else if (score >= 14) acc['Très bien'] = (acc['Très bien'] || 0) + 1
           else if (score >= 12) acc['Bien'] = (acc['Bien'] || 0) + 1
