@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           niveau,
           users(name, email)
         ),
-        evaluateur:users!evaluateur_id(name, email)
+        evaluateur:users(name, email)
       `)
       .order('created_at', { ascending: false })
 
@@ -192,8 +192,24 @@ export async function POST(request: NextRequest) {
 
     // Vérifier que les champs requis sont présents
     if (!evaluationData.stagiaire_id) {
+      console.error("❌ Stagiaire ID manquant")
       return NextResponse.json(
-        { error: 'ID du stagiaire requis' },
+        { 
+          success: false,
+          error: 'ID du stagiaire requis' 
+        },
+        { status: 400 }
+      )
+    }
+
+    // Valider les données d'évaluation
+    if (!evaluationData.periode_debut || !evaluationData.periode_fin) {
+      console.error("❌ Périodes manquantes")
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Les périodes de début et fin sont requises' 
+        },
         { status: 400 }
       )
     }
@@ -253,20 +269,32 @@ export async function POST(request: NextRequest) {
       // Retourner des erreurs plus spécifiques
       if (error.code === '23503') {
         return NextResponse.json(
-          { error: 'Clé étrangère invalide - vérifiez que le stagiaire et l\'évaluateur existent' },
+          { 
+            success: false,
+            error: 'Clé étrangère invalide - vérifiez que le stagiaire et l\'évaluateur existent',
+            code: error.code 
+          },
           { status: 400 }
         )
       }
       
       if (error.code === '23505') {
         return NextResponse.json(
-          { error: 'Une évaluation existe déjà pour ce stagiaire dans cette période' },
+          { 
+            success: false,
+            error: 'Une évaluation existe déjà pour ce stagiaire dans cette période',
+            code: error.code 
+          },
           { status: 409 }
         )
       }
       
       return NextResponse.json(
-        { error: 'Erreur lors de la création de l\'évaluation: ' + error.message },
+        { 
+          success: false,
+          error: 'Erreur lors de la création de l\'évaluation: ' + error.message,
+          details: error.hint || 'Aucun détail supplémentaire'
+        },
         { status: 500 }
       )
     }
