@@ -63,9 +63,9 @@ export function Footer() {
               <li className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 text-gray-400" />
                 <span className="text-gray-300 text-sm">
-                  B.P:1418 Douala-Cameroun
+                  B.P:1418 
                   <br />
-                  75001 Paris, France
+                  Douala-Cameroun
                 </span>
               </li>
               <li className="flex items-center space-x-2">
