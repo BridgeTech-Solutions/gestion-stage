@@ -85,32 +85,43 @@ export default function RHEvaluationsPage() {
         url += `?stagiaire_id=${stagiaireFilter}`
       }
 
+      console.log("🔍 RH - Récupération des évaluations depuis:", url)
+
       const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
       })
 
+      console.log("📋 RH - Réponse évaluations:", response.status)
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Erreur de communication' }))
+        console.error("❌ RH - Erreur response:", errorData)
         throw new Error(errorData.error || `Erreur ${response.status}`)
       }
 
       const data = await response.json()
-      console.log("✅ Données évaluations reçues:", data)
+      console.log("✅ RH - Données évaluations reçues:", data)
 
       // Gérer les réponses même en cas d'erreur serveur
       if (data.success === false && data.evaluations) {
         setEvaluations(data.evaluations)
         setError(data.error || "Erreur lors du chargement")
       } else if (data.success) {
+        console.log("✅ RH - Évaluations chargées:", data.evaluations?.length || 0)
         setEvaluations(data.evaluations || [])
       } else {
+        console.error("❌ RH - Réponse inattendue:", data)
         throw new Error(data.error || "Erreur lors de la récupération")
       }
     } catch (error) {
-      console.error("❌ Erreur fetchEvaluations:", error)
+      console.error("❌ RH - Erreur fetchEvaluations:", error)
       setError(error instanceof Error ? error.message : "Erreur lors du chargement des évaluations")
+      // Définir un tableau vide en cas d'erreur
+      setEvaluations([])
     } finally {
       setLoading(false)
     }
