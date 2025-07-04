@@ -146,6 +146,7 @@ export async function POST(request: NextRequest) {
     const { data: { session }, error: authError } = await supabase.auth.getSession()
 
     if (authError || !session) {
+      console.error("❌ Erreur auth évaluation POST:", authError)
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
     }
 
     const evaluationData = await request.json()
+    console.log("📋 Données évaluation reçues:", evaluationData)
 
     // Vérifier que les champs requis sont présents
     if (!evaluationData.stagiaire_id) {
@@ -162,22 +164,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Vérifier que le stagiaire existe
+    const { data: stagiaireExists, error: stagiaireError } = await supabase
+      .from('stagiaires')
+      .select('id')
+      .eq('id', evaluationData.stagiaire_id)
+      .single()
+
+    if (stagiaireError || !stagiaireExists) {
+      console.error("❌ Stagiaire non trouvé:", evaluationData.stagiaire_id)
+      return NextResponse.json(
+        { error: 'Stagiaire non trouvé' },
+        { status: 404 }
+      )
+    }
+
+    // Préparer les données pour l'insertion
+    const insertData = {
+      stagiaire_id: evaluationData.stagiaire_id,
+      evaluateur_id: session.user.id,
+      periode_debut: evaluationData.periode_debut,
+      periode_fin: evaluationData.periode_fin,
+      type: evaluationData.type || 'mi_parcours',
+      note_globale: evaluationData.note_globale || 0,
+      competences_techniques: evaluationData.competences_techniques || 0,
+      competences_relationnelles: evaluationData.competences_relationnelles || 0,
+      autonomie: evaluationData.autonomie || 0,
+      ponctualite: evaluationData.ponctualite || 0,
+      motivation: evaluationData.motivation || 0,
+      commentaires: evaluationData.commentaires || '',
+      points_forts: evaluationData.points_forts || '',
+      axes_amelioration: evaluationData.axes_amelioration || '',
+      objectifs_suivants: evaluationData.objectifs_suivants || '',
+      recommandations: evaluationData.recommandations || '',
+      statut: evaluationData.statut || 'brouillon',
+      created_at: new Date().toISOString()
+    }
+
+    console.log("💾 Données à insérer:", insertData)
+
     const { data, error } = await supabase
       .from('evaluations')
-      .insert({
-        ...evaluationData,
-        evaluateur_id: session.user.id,
-        created_at: new Date().toISOString()
-      })
-      .select()
+      .insert(insertData)
+      .select(`
+        *,
+        stagiaire:stagiaires!inner(
+          id,
+          user_id,
+          specialite,
+          niveau,
+          users!inner(name, email)
+        ),
+        evaluateur:users!evaluations_evaluateur_id_fkey(name, email)
+      `)
 
     if (error) {
       console.error('❌ Erreur create evaluation:', error)
+      console.error('❌ Détails erreur:', error.message, error.hint, error.details)
       return NextResponse.json(
         { error: 'Erreur lors de la création de l\'évaluation: ' + error.message },
         { status: 500 }
       )
     }
+
+    console.log("✅ Évaluation créée:", data[0])
 
     return NextResponse.json({
       success: true,
