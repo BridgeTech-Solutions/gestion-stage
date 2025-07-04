@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -200,6 +199,8 @@ export default function NouvelleEvaluationPage() {
 
     setSaving(true)
     try {
+      console.log("🔄 Envoi des données évaluation:", evaluation)
+
       const response = await fetch('/api/evaluations', {
         method: 'POST',
         headers: {
@@ -208,8 +209,31 @@ export default function NouvelleEvaluationPage() {
         body: JSON.stringify(evaluation),
       })
 
+      console.log("📡 Réponse API status:", response.status)
+
+      const responseData = await response.json()
+      console.log("📋 Données de réponse:", responseData)
+
       if (!response.ok) {
-        throw new Error("Erreur lors de la sauvegarde")
+        const errorMessage = responseData.error || "Erreur lors de la sauvegarde"
+        console.error("❌ Erreur API:", errorMessage, responseData)
+
+        toast({
+          title: "Erreur",
+          description: errorMessage,
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!responseData.success) {
+        console.error("❌ Réponse non successful:", responseData)
+        toast({
+          title: "Erreur",
+          description: responseData.error || "Erreur lors de la sauvegarde",
+          variant: "destructive",
+        })
+        return
       }
 
       toast({
@@ -219,10 +243,10 @@ export default function NouvelleEvaluationPage() {
 
       router.push("/rh/evaluations")
     } catch (error) {
-      console.error("Erreur sauvegarde:", error)
+      console.error("💥 Erreur sauvegarde complète:", error)
       toast({
         title: "Erreur",
-        description: "Erreur lors de la sauvegarde",
+        description: error instanceof Error ? error.message : "Erreur lors de la sauvegarde",
         variant: "destructive",
       })
     } finally {
