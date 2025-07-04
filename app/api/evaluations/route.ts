@@ -46,6 +46,8 @@ export async function GET(request: NextRequest) {
         stagiaire:stagiaires!inner(
           id,
           user_id,
+          specialite,
+          niveau,
           users!inner(name, email)
         ),
         evaluateur:users!evaluations_evaluateur_id_fkey(name, email)
