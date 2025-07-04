@@ -1,197 +1,168 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, FileText, Search, Filter, Eye, Edit, Trash2, Plus } from "lucide-react"
 import { Header } from "@/components/layout/header"
+import { ClipboardList, Search, Eye, Edit, Plus } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface Evaluation {
   id: string
-  type: string
+  stagiaire_id: string
+  tuteur_id: string
   note_globale: number
+  commentaires: string
   competences_techniques: number
   competences_relationnelles: number
   autonomie: number
-  commentaires?: string
-  date_evaluation: string
+  ponctualite: number
+  motivation: number
+  periode_debut: string
+  periode_fin: string
+  statut: string
   created_at: string
-  stagiaire: {
-    id: string
+  stagiaire?: {
     users: {
       name: string
       email: string
     }
   }
-  evaluateur: {
+  tuteur?: {
     name: string
     email: string
   }
 }
 
 export default function RHEvaluationsPage() {
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [typeFilter, setTypeFilter] = useState<string>("all")
-  const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
-
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([])
+  const [filteredEvaluations, setFilteredEvaluations] = useState<Evaluation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const stagiaireFilter = searchParams.get('stagiaire')
+  const supabase = createClient()
+  const { toast } = useToast()
 
   useEffect(() => {
-    fetchUser()
-  }, [])
+    const checkAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-  useEffect(() => {
-    if (user) {
-      fetchEvaluations()
-    }
-  }, [user])
+        if (!session) {
+          router.push("/auth/login")
+          return
+        }
 
-  useEffect(() => {
-    if (user && stagiaireFilter) {
-      fetchEvaluations()
-    }
-  }, [stagiaireFilter])
+        const { data: profile, error: profileError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", session.user.id)
+          .single()
 
-  const fetchUser = async () => {
-    try {
-      const response = await fetch("/api/auth/user")
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
+        if (profileError || !profile || profile.role !== "rh" || !profile.is_active) {
+          router.push("/auth/login")
+          return
+        }
+
+        setUser(profile)
+        await loadEvaluations()
+        setLoading(false)
+      } catch (error) {
+        console.error("Erreur auth:", error)
+        router.push("/auth/login")
       }
-    } catch (error) {
-      console.error("Erreur récupération utilisateur:", error)
     }
-  }
 
-  const fetchEvaluations = async () => {
+    checkAuth()
+  }, [router, supabase])
+
+  const loadEvaluations = async () => {
     try {
-      setLoading(true)
-      setError(null)
-
-      let url = "/api/evaluations"
-      if (stagiaireFilter) {
-        url += `?stagiaire_id=${stagiaireFilter}`
-      }
-
-      console.log("🔍 RH - Récupération des évaluations depuis:", url)
-
-      const response = await fetch(url, {
+      const response = await fetch('/api/evaluations', {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       })
 
-      console.log("📋 RH - Réponse évaluations:", response.status)
-
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Erreur de communication' }))
-        console.error("❌ RH - Erreur response:", errorData)
-        throw new Error(errorData.error || `Erreur ${response.status}`)
+        throw new Error("Erreur lors du chargement")
       }
 
       const data = await response.json()
-      console.log("✅ RH - Données évaluations reçues:", data)
 
-      // Gérer les réponses même en cas d'erreur serveur
-      if (data.success === false && data.evaluations) {
-        setEvaluations(data.evaluations)
-        setError(data.error || "Erreur lors du chargement")
-      } else if (data.success) {
-        console.log("✅ RH - Évaluations chargées:", data.evaluations?.length || 0)
+      if (data.success) {
         setEvaluations(data.evaluations || [])
+        setFilteredEvaluations(data.evaluations || [])
       } else {
-        console.error("❌ RH - Réponse inattendue:", data)
-        throw new Error(data.error || "Erreur lors de la récupération")
+        setEvaluations([])
+        setFilteredEvaluations([])
       }
     } catch (error) {
-      console.error("❌ RH - Erreur fetchEvaluations:", error)
-      setError(error instanceof Error ? error.message : "Erreur lors du chargement des évaluations")
-      // Définir un tableau vide en cas d'erreur
-      setEvaluations([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const deleteEvaluation = async (id: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette évaluation ?")) {
-      return
-    }
-
-    try {
-      const response = await fetch(`/api/evaluations/${id}`, {
-        method: "DELETE",
+      console.error("Erreur lors du chargement des évaluations:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les évaluations",
+        variant: "destructive",
       })
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la suppression")
-      }
-
-      setEvaluations(evaluations.filter(e => e.id !== id))
-    } catch (error) {
-      console.error("Erreur suppression:", error)
-      setError("Erreur lors de la suppression de l'évaluation")
+      setEvaluations([])
+      setFilteredEvaluations([])
     }
   }
 
-  const filteredEvaluations = evaluations.filter(evaluation => {
-    const matchesSearch = evaluation.stagiaire?.users?.name
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase()) ||
-      evaluation.evaluateur?.name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase())
-    
-    const matchesType = typeFilter === "all" || evaluation.type === typeFilter
+  useEffect(() => {
+    let filtered = evaluations
 
-    return matchesSearch && matchesType
-  })
-
-  const getTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      mi_parcours: "Mi-parcours",
-      finale: "Finale", 
-      auto_evaluation: "Auto-évaluation"
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (evaluation) =>
+          evaluation.stagiaire?.users?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evaluation.tuteur?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          evaluation.statut.toLowerCase().includes(searchQuery.toLowerCase())
+      )
     }
-    return types[type] || type
+
+    setFilteredEvaluations(filtered)
+  }, [evaluations, searchQuery])
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("fr-FR")
   }
 
-  const getTypeColor = (type: string) => {
-    const colors: Record<string, string> = {
-      mi_parcours: "bg-blue-100 text-blue-800",
-      finale: "bg-green-100 text-green-800",
-      auto_evaluation: "bg-purple-100 text-purple-800"
+  const getStatutBadge = (statut: string) => {
+    switch (statut) {
+      case 'finalisee':
+        return <Badge variant="default">Finalisée</Badge>
+      case 'en_cours':
+        return <Badge variant="secondary">En cours</Badge>
+      case 'brouillon':
+        return <Badge variant="outline">Brouillon</Badge>
+      default:
+        return <Badge variant="outline">{statut}</Badge>
     }
-    return colors[type] || "bg-gray-100 text-gray-800"
   }
 
-  const getNoteColor = (note: number) => {
-    if (note >= 16) return "text-green-600 font-semibold"
-    if (note >= 12) return "text-orange-600 font-semibold"
-    return "text-red-600 font-semibold"
+  const getNoteBadge = (note: number) => {
+    if (note >= 16) return <Badge className="bg-green-500">Excellent</Badge>
+    if (note >= 14) return <Badge className="bg-blue-500">Très bien</Badge>
+    if (note >= 12) return <Badge className="bg-yellow-500">Bien</Badge>
+    if (note >= 10) return <Badge className="bg-orange-500">Assez bien</Badge>
+    return <Badge className="bg-red-500">Insuffisant</Badge>
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span>Chargement...</span>
-        </div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -203,103 +174,60 @@ export default function RHEvaluationsPage() {
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Gestion des évaluations</h1>
-          <p className="text-gray-600">Superviser et gérer toutes les évaluations des stagiaires</p>
+          <p className="text-gray-600">Voir et gérer toutes les évaluations des stagiaires</p>
         </div>
 
-        {error && (
-          <Alert className="mb-6 border-red-200 bg-red-50">
-            <AlertDescription className="text-red-700">
-              {error}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        {/* Actions rapides */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total</p>
-                  <p className="text-2xl font-bold text-gray-900">{evaluations.length}</p>
-                </div>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-lg">Nouvelle évaluation</CardTitle>
+              <CardDescription>Créer une nouvelle évaluation</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => router.push("/rh/evaluations/nouvelle")}>
+                <Plus className="mr-2 h-4 w-4" />
+                Créer évaluation
+              </Button>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Mi-parcours</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {evaluations.filter(e => e.type === "mi_parcours").length}
-                  </p>
-                </div>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-lg">Statistiques</CardTitle>
+              <CardDescription>Voir les statistiques globales</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full" onClick={() => router.push("/rh/evaluations/stats")}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Voir statistiques
+              </Button>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Finales</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {evaluations.filter(e => e.type === "finale").length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Note moyenne</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {evaluations.length > 0 
-                      ? (evaluations.reduce((sum, e) => sum + e.note_globale, 0) / evaluations.length).toFixed(1)
-                      : "0"
-                    }
-                  </p>
-                </div>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-lg">Export</CardTitle>
+              <CardDescription>Exporter les données</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" className="w-full">
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Exporter
+              </Button>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtres et recherche */}
+        {/* Recherche */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Rechercher par nom de stagiaire ou évaluateur..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-48">
-                    <Filter className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Type d'évaluation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les types</SelectItem>
-                    <SelectItem value="mi_parcours">Mi-parcours</SelectItem>
-                    <SelectItem value="finale">Finale</SelectItem>
-                    <SelectItem value="auto_evaluation">Auto-évaluation</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Rechercher par stagiaire, tuteur, statut..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
             </div>
           </CardContent>
         </Card>
@@ -307,103 +235,75 @@ export default function RHEvaluationsPage() {
         {/* Tableau des évaluations */}
         <Card>
           <CardHeader>
-            <CardTitle>Liste des évaluations</CardTitle>
-            <CardDescription>
-              {filteredEvaluations.length} évaluation(s) trouvée(s)
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="h-5 w-5" />
+              Évaluations ({filteredEvaluations.length})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {filteredEvaluations.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune évaluation</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Aucune évaluation ne correspond à vos critères de recherche.
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Stagiaire</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Note globale</TableHead>
-                      <TableHead>Compétences techniques</TableHead>
-                      <TableHead>Compétences relationnelles</TableHead>
-                      <TableHead>Autonomie</TableHead>
-                      <TableHead>Évaluateur</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredEvaluations.map((evaluation) => (
-                      <TableRow key={evaluation.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{evaluation.stagiaire?.users?.name}</div>
-                            <div className="text-sm text-gray-500">{evaluation.stagiaire?.users?.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getTypeColor(evaluation.type)}>
-                            {getTypeLabel(evaluation.type)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className={getNoteColor(evaluation.note_globale)}>
-                            {evaluation.note_globale}/20
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={getNoteColor(evaluation.competences_techniques)}>
-                            {evaluation.competences_techniques}/20
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={getNoteColor(evaluation.competences_relationnelles)}>
-                            {evaluation.competences_relationnelles}/20
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={getNoteColor(evaluation.autonomie)}>
-                            {evaluation.autonomie}/20
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div className="font-medium">{evaluation.evaluateur?.name}</div>
-                            <div className="text-gray-500">{evaluation.evaluateur?.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {new Date(evaluation.date_evaluation).toLocaleDateString("fr-FR")}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => router.push(`/rh/evaluations/${evaluation.id}`)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteEvaluation(evaluation.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Stagiaire</TableHead>
+                  <TableHead>Tuteur</TableHead>
+                  <TableHead>Période</TableHead>
+                  <TableHead>Note globale</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Date création</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEvaluations.map((evaluation) => (
+                  <TableRow key={evaluation.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{evaluation.stagiaire?.users?.name || "N/A"}</div>
+                        <div className="text-sm text-gray-500">{evaluation.stagiaire?.users?.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{evaluation.tuteur?.name || "N/A"}</div>
+                        <div className="text-sm text-gray-500">{evaluation.tuteur?.email}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {formatDate(evaluation.periode_debut)} - {formatDate(evaluation.periode_fin)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold">{evaluation.note_globale}/20</span>
+                        {getNoteBadge(evaluation.note_globale)}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {getStatutBadge(evaluation.statut)}
+                    </TableCell>
+                    <TableCell>{formatDate(evaluation.created_at)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/rh/evaluations/${evaluation.id}`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => router.push(`/rh/evaluations/${evaluation.id}/edit`)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filteredEvaluations.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-gray-500">
+                      Aucune évaluation trouvée
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </main>
