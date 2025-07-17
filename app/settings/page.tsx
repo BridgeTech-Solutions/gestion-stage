@@ -242,27 +242,13 @@ export default function SettingsPage() {
                 <User className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden xs:inline">Profil</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="notifications"
-                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
-              >
-                <Bell className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Notifications</span>
-              </TabsTrigger>
+           
               <TabsTrigger
                 value="security"
                 className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4"
               >
                 <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="hidden xs:inline">Sécurité</span>
-              </TabsTrigger>
-              <TabsTrigger value="display" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
-                <Palette className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Affichage</span>
-              </TabsTrigger>
-              <TabsTrigger value="privacy" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
-                <Globe className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Confidentialité</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -276,16 +262,6 @@ export default function SettingsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-center gap-6">
-                  <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
-                    <AvatarImage src="/placeholder-user.jpg" />
-                    <AvatarFallback>{profile.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    <Camera className="mr-2 h-4 w-4" />
-                    Changer la photo
-                  </Button>
-                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="name">Nom complet</Label>
@@ -318,84 +294,6 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex justify-end">
                   <Button onClick={saveProfile} disabled={saving} className="w-full sm:w-auto">
-                    {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Sauvegarder
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Préférences de notification
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Notifications par email</Label>
-                      <p className="text-sm text-gray-500">Recevoir des notifications par email</p>
-                    </div>
-                    <Switch
-                      checked={settings.notifications.email}
-                      onCheckedChange={(checked) =>
-                        setSettings({
-                          ...settings,
-                          notifications: { ...settings.notifications, email: checked },
-                        })
-                      }
-                    />
-                  </div>
-                  <Separator />
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium">Types de notifications :</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Nouvelles demandes</span>
-                        <Switch
-                          checked={settings.notifications.demandes}
-                          onCheckedChange={(checked) =>
-                            setSettings({
-                              ...settings,
-                              notifications: { ...settings.notifications, demandes: checked },
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Évaluations</span>
-                        <Switch
-                          checked={settings.notifications.evaluations}
-                          onCheckedChange={(checked) =>
-                            setSettings({
-                              ...settings,
-                              notifications: { ...settings.notifications, evaluations: checked },
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Documents</span>
-                        <Switch
-                          checked={settings.notifications.documents}
-                          onCheckedChange={(checked) =>
-                            setSettings({
-                              ...settings,
-                              notifications: { ...settings.notifications, documents: checked },
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
                     {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                     Sauvegarder
                   </Button>
@@ -451,155 +349,6 @@ export default function SettingsPage() {
                   >
                     {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Shield className="mr-2 h-4 w-4" />}
                     Changer le mot de passe
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="display">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  Préférences d'affichage
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="space-y-2">
-                    <Label>Thème</Label>
-                    <Select
-                      value={settings.display.theme}
-                      onValueChange={(value) =>
-                        setSettings({ ...settings, display: { ...settings.display, theme: value } })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="light">Clair</SelectItem>
-                        <SelectItem value="dark">Sombre</SelectItem>
-                        <SelectItem value="system">Système</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Langue</Label>
-                    <Select
-                      value={settings.display.language}
-                      onValueChange={(value) =>
-                        setSettings({ ...settings, display: { ...settings.display, language: value } })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fr">Français</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Fuseau horaire</Label>
-                    <Select
-                      value={settings.display.timezone}
-                      onValueChange={(value) =>
-                        setSettings({ ...settings, display: { ...settings.display, timezone: value } })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Africa/Douala">Afrique/Douala</SelectItem>
-                        <SelectItem value="Europe/Paris">Europe/Paris</SelectItem>
-                        <SelectItem value="UTC">UTC</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Format de date</Label>
-                    <Select
-                      value={settings.display.dateFormat}
-                      onValueChange={(value) =>
-                        setSettings({ ...settings, display: { ...settings.display, dateFormat: value } })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DD/MM/YYYY">DD/MM/YYYY</SelectItem>
-                        <SelectItem value="MM/DD/YYYY">MM/DD/YYYY</SelectItem>
-                        <SelectItem value="YYYY-MM-DD">YYYY-MM-DD</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
-                    {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Sauvegarder
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="privacy">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  Paramètres de confidentialité
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Profil visible</Label>
-                      <p className="text-sm text-gray-500">Permettre aux autres utilisateurs de voir votre profil</p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.profileVisible}
-                      onCheckedChange={(checked) =>
-                        setSettings({ ...settings, privacy: { ...settings.privacy, profileVisible: checked } })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Email visible</Label>
-                      <p className="text-sm text-gray-500">Afficher votre email dans votre profil public</p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.emailVisible}
-                      onCheckedChange={(checked) =>
-                        setSettings({ ...settings, privacy: { ...settings.privacy, emailVisible: checked } })
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Téléphone visible</Label>
-                      <p className="text-sm text-gray-500">Afficher votre téléphone dans votre profil public</p>
-                    </div>
-                    <Switch
-                      checked={settings.privacy.phoneVisible}
-                      onCheckedChange={(checked) =>
-                        setSettings({ ...settings, privacy: { ...settings.privacy, phoneVisible: checked } })
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
-                    {saving ? <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Sauvegarder
                   </Button>
                 </div>
               </CardContent>
